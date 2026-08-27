@@ -1163,7 +1163,7 @@ async function initNet(){
     }
     const db=firebase.database();
     const code=(player.session||'default').replace(/[.#$/\[\]]/g,'_');
-    net.pid=Math.random().toString(36).slice(2,9);
+    net.pid = `c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
     net.me=db.ref('s/'+code+'/p/'+net.pid); net.me.onDisconnect().remove();
     db.ref('s/'+code+'/p').on('value',snap=>{net.data=snap.val()||{};});
     net.ready=true;
