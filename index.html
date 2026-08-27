@@ -186,7 +186,33 @@
 <!-- 캐릭터 세팅 -->
 <div class="screen" id="setup"><div class="card">
   <h1>밀실의 문 앞에서</h1>
-  <input class="fld" id="nameIn" maxlength="8" placeholder="이름 (최대 8자)">
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <select class="fld" id="classIn" style="flex:1;margin:0">
+      <option value="">-- 반 선택 --</option>
+      <option value="1">1반</option>
+      <option value="2">2반</option>
+      <option value="3">3반</option>
+      <option value="4">4반</option>
+      <option value="5">5반</option>
+      <option value="6">6반</option>
+      <option value="7">7반</option>
+      <option value="8">8반</option>
+      <option value="9">9반</option>
+      <option value="10">10반</option>
+      <option value="11">11반</option>
+      <option value="12">12반</option>
+      <option value="13">13반</option>
+      <option value="14">14반</option>
+      <option value="15">15반</option>
+      <option value="16">16반</option>
+      <option value="17">17반</option>
+      <option value="18">18반</option>
+      <option value="19">19반</option>
+      <option value="20">20반</option>
+    </select>
+    <input class="fld" id="numIn" type="number" min="1" max="50" placeholder="번호" style="flex:1;margin:0" inputmode="numeric">
+  </div>
+  <input class="fld" id="nameIn" maxlength="8" placeholder="이름 (최대 8자)" style="margin-top:0">
   <div class="swatches" id="swatches"></div>
   <div style="display:flex;gap:10px;justify-content:center;margin-top:6px;width:100%">
     <button class="btn" id="toIntro" style="font-size:1.1rem;padding:12px 26px;flex:1">확인</button>
@@ -253,6 +279,10 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"
   onerror="var l=document.getElementById('loading');l.style.display='flex';l.innerHTML='<div style=&quot;max-width:340px&quot;>3D 라이브러리를 불러오지 못했습니다.<br>인터넷에 연결한 뒤 새로고침하세요.</div>'"></script>
 
+<!-- Firebase Realtime Database 연동용 SDK 추가 -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
 <script>
 /* ===================== 선생님 설정 ===================== */
 const CONFIG = {
@@ -269,8 +299,15 @@ const CONFIG = {
   },
 
   // 3. 멀티플레이 설정
-  FIREBASE: { apiKey:"", authDomain:"", databaseURL:"", projectId:"" }
+  FIREBASE: { apiKey:"AIzaSyBL5S89ZPrwPcxE0SNYOU-7wbkhesNBKkQ", authDomain:"hangeul-escape.firebaseapp.com", databaseURL:"https://hangeul-escape-default-rtdb.asia-southeast1.firebasedatabase.app", projectId:"hangeul-escape" }
 };
+if (typeof firebase !== 'undefined' && CONFIG.FIREBASE && CONFIG.FIREBASE.databaseURL) {
+  try {
+    firebase.initializeApp(CONFIG.FIREBASE);
+  } catch(e) {
+    console.warn("Firebase 초기화 실패:", e);
+  }
+}
 /* 방·문제·정답은 ROOMS 배열에서 바로 수정. x,z = 바닥 좌표(-15~15), slot = 금고 자리(0~3) */
 const ROOMS = [
   { name:"제1방 · 창제의 방", concept:"세종과 집현전, 훈민정음이 태어난 밤",
@@ -529,7 +566,7 @@ const IS_TOUCH = (matchMedia&&matchMedia('(pointer:coarse)').matches) || ('ontou
 $('#hintbar').textContent = IS_TOUCH
   ? '오른쪽 조이스틱으로 이동 · 가구에 다가가 톡톡 두드리기(화면 터치)'
   : '이동 WASD/조이스틱 · 가구에 다가가 클릭 또는 E로 두드리기';
-const player={name:'탐험가',shirt:SHIRTS[0],session:''};
+const player={name:'탐험가',shirt:SHIRTS[0],session:'',classId:'1',number:1};
 const progress={room:0};
 const S={done:{},digits:['?','?','?','?'],items:[],near:null,paused:true,startTime:0};
 window.S=S;
@@ -545,11 +582,22 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     d.onclick=()=>{document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));d.classList.add('on');player.shirt=c;};
     sw.appendChild(d);});
   $('#toIntro').onclick=()=>{
-    player.name=($('#nameIn').value.trim()||'탐험가').slice(0,8);
+    const classId = $('#classIn').value;
+    const number = parseInt($('#numIn').value, 10);
+    const name = $('#nameIn').value.trim();
+
+    if(!classId){ alert('학급(반)을 선택해주세요.'); return; }
+    if(isNaN(number) || number < 1 || number > 50){ alert('번호를 1~50 사이의 숫자로 입력해주세요.'); return; }
+    if(!name){ alert('이름을 입력해주세요.'); return; }
+
+    player.classId = classId;
+    player.number = number;
+    player.name = name.slice(0,8);
     S.startTime = Date.now();
     S.wrongCounts = {};
     localStorage.removeItem('hangeul_escape_save');
     $('#setup').style.display='none'; $('#intro').style.display='flex';
+    syncFirebase('login');
   };
   
   const saveStr = localStorage.getItem('hangeul_escape_save');
@@ -562,6 +610,8 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
         btn.onclick = () => {
           player.name = saved.playerName;
           player.shirt = saved.playerShirt;
+          player.classId = saved.playerClass || '1';
+          player.number = saved.playerNumber || 1;
           progress.room = saved.room || 0;
           S.done = saved.done || {};
           S.digits = saved.digits || ['?','?','?','?'];
@@ -575,6 +625,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
           if(typeof THREE!=='undefined') {
             start3D(true);
           }
+          syncFirebase('resume');
         };
       }
     } catch(e) { console.error(e); }
@@ -590,9 +641,82 @@ function saveGame(){
     startTime: S.startTime || Date.now(),
     playerName: player.name,
     playerShirt: player.shirt,
+    playerClass: player.classId,
+    playerNumber: player.number,
     wrongCounts: S.wrongCounts || {}
   };
   localStorage.setItem('hangeul_escape_save', JSON.stringify(data));
+}
+
+/* ---------- Firebase 실시간 모니터링 상태 동기화 ---------- */
+function syncFirebase(event) {
+  if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
+    return;
+  }
+  try {
+    const classId = player.classId || '1';
+    const number = player.number || 1;
+    const db = firebase.database();
+    
+    const roomIdx = progress.room;
+    const R = ROOMS[roomIdx];
+    const roomName = R ? R.name : `제${roomIdx+1}방`;
+    
+    let doneCount = 0;
+    let totalPuzzles = 0;
+    let lastSolvedName = '';
+    if (R && R.stations) {
+      R.stations.forEach(st => {
+        if (st.type === 'choice' || st.type === 'text') {
+          totalPuzzles++;
+          if (S.done[st.id]) {
+            doneCount++;
+            lastSolvedName = st.name || st.k;
+          }
+        }
+      });
+    }
+    
+    let progressRate = Math.round(roomIdx * 25);
+    if (totalPuzzles > 0) {
+      progressRate += Math.round((doneCount / totalPuzzles) * 20);
+    }
+    
+    let currentStep = '게임 시작';
+    if (event === 'login') {
+      currentStep = '대기실 입장';
+    } else if (event === 'resume') {
+      currentStep = '이어서 하기로 복귀';
+    } else if (event === 'win') {
+      progressRate = 100;
+      currentStep = '최종 탈출 성공!';
+    } else if (event === 'safe') {
+      progressRate = Math.round(roomIdx * 25) + 25;
+      currentStep = `${roomIdx + 1}방 탈출 완료! 다음 방 이동 중`;
+    } else {
+      if (doneCount === totalPuzzles) {
+        currentStep = '열쇠 획득! 금고 오픈 대기 중';
+      } else if (doneCount > 0) {
+        currentStep = `[${lastSolvedName}] 해결 (${doneCount}/${totalPuzzles})`;
+      } else {
+        currentStep = '새로운 방 탐색 중';
+      }
+    }
+    
+    const updates = {
+      number: Number(number),
+      name: player.name || '탐험가',
+      currentRoom: roomIdx,
+      currentRoomName: roomName,
+      currentStep: currentStep,
+      progressRate: Math.min(100, progressRate),
+      lastUpdated: Date.now()
+    };
+    
+    db.ref('classes/' + classId + '/student_' + number).update(updates);
+  } catch (e) {
+    console.warn('Firebase 상태 동기화 실패:', e);
+  }
 }
 
 /* ---------- HUD ---------- */
@@ -957,6 +1081,7 @@ function buildRoom(i, isResume){
   hero.position.set(0,0,7); hero.rotation.y=Math.PI;
   renderHUD();
   saveGame();
+  syncFirebase('room_start');
   if(!isResume){
     setTimeout(()=>{
       openRoomIntro(R);
@@ -1025,9 +1150,11 @@ function loadScript(src){return new Promise((res,rej)=>{const s=document.createE
 async function initNet(){
   const F=CONFIG.FIREBASE; if(!F||!F.databaseURL)return;
   try{
-    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
-    firebase.initializeApp(F); const db=firebase.database();
+    if (typeof firebase === 'undefined') return;
+    if (firebase.apps.length === 0) {
+      firebase.initializeApp(F);
+    }
+    const db=firebase.database();
     const code=(player.session||'default').replace(/[.#$/\[\]]/g,'_');
     net.pid=Math.random().toString(36).slice(2,9);
     net.me=db.ref('s/'+code+'/p/'+net.pid); net.me.onDisconnect().remove();
@@ -1332,7 +1459,7 @@ window.tryText=id=>{
     alert("오류 발생: " + err.message);
   }
 };
-function markDone(id){S.done[id]=true;const st=stById(id);if(st){if(st.marker)st.marker.visible=false;if(st.star)st.star.visible=false;} saveGame();}
+function markDone(id){S.done[id]=true;const st=stById(id);if(st){if(st.marker)st.marker.visible=false;if(st.star)st.star.visible=false;} saveGame(); syncFirebase('solve');}
 function openSafe(){let entry='';
   document.body.classList.add('modal-open');
   const render=()=>{$('#modal').innerHTML=`<div class="k">${CUR().name} · 금고</div><div class="q">네 자리 번호를 입력하라.</div>
@@ -1349,7 +1476,7 @@ function openSafe(){let entry='';
     else if(entry.length<4)entry+=k;
     render();};
   $('#overlay').style.display='flex';render();}
-function finishRoom(){ if(progress.room>=ROOMS.length-1)win(); else window.__advance(); }
+function finishRoom(){ syncFirebase('safe'); if(progress.room>=ROOMS.length-1)win(); else window.__advance(); }
 function makeCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');
   const rnd=Array.from({length:2},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
   return `HG-${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}-${rnd}`;}
@@ -1379,6 +1506,7 @@ function submitGoogleForm(code, duration){
    .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
 }
 function win(){
+  syncFirebase('win');
   const elapsedMs = Date.now() - (S.startTime || Date.now());
   document.body.classList.add('modal-open');
   const elapsedMin = Math.floor(elapsedMs / 60000);

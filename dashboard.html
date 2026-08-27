@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>훈민정음 대탈출 — 교사용 모니터링 대시보드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Gothic:wght@400;700&display=swap');
+    body {
+      font-family: 'Nanum Gothic', sans-serif;
+      background-color: #0f0a07;
+      color: #eae0d5;
+    }
+    .myeongjo {
+      font-family: 'Nanum Myeongjo', serif;
+    }
+    .stagnant-pulse {
+      animation: borderPulse 1.5s infinite alternate;
+    }
+    @keyframes borderPulse {
+      0% {
+        border-color: #b91c1c;
+        box-shadow: 0 0 4px #b91c1c;
+      }
+      100% {
+        border-color: #f87171;
+        box-shadow: 0 0 16px #ef4444;
+      }
+    }
+    .chip-transition {
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="p-4 md:p-6 max-w-7xl mx-auto">
+  <!-- 상단 헤더 -->
+  <header class="flex flex-col md:flex-row justify-between items-center border-b border-yellow-900/30 pb-4 mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-4xl">👨‍🏫</span>
+      <div>
+        <h1 class="text-2xl font-bold text-amber-500 myeongjo">훈민정음 대탈출</h1>
+        <p class="text-xs text-amber-600/70">실시간 학급별 모니터링 대시보드</p>
+      </div>
+    </div>
+    
+    <!-- 반 선택 드롭다운 -->
+    <div class="flex items-center gap-2">
+      <label for="classSelect" class="text-sm font-semibold text-amber-500/80 myeongjo">학급 선택:</label>
+      <select id="classSelect" class="bg-stone-900 border border-yellow-900/50 text-amber-300 rounded px-3 py-1.5 focus:outline-none focus:border-amber-500">
+      </select>
+    </div>
+  </header>
+
+  <!-- 메인 모니터링 패널 -->
+  <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 실시간 공간 맵 뷰 -->
+    <section class="lg:col-span-2 space-y-6">
+      <div class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
+        <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center gap-2">
+          <span>🗺️</span> 실시간 배치 맵 (공간 뷰)
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4" id="mapRooms">
+        </div>
+      </div>
+      
+      <!-- 요약 정보 / 범례 -->
+      <div class="bg-stone-950/40 border border-yellow-900/10 rounded-xl p-4 flex flex-wrap gap-4 text-xs text-stone-400">
+        <div class="flex items-center gap-1.5">
+          <span class="inline-block w-3.5 h-3.5 bg-amber-500/10 border border-amber-500/40 rounded"></span>
+          <span>정상 진행 학생</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="inline-block w-3.5 h-3.5 bg-red-950/40 border border-red-500/60 rounded stagnant-pulse"></span>
+          <span>3분 이상 정체 (집중 도움 필요)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="inline-block w-3.5 h-3.5 bg-emerald-950/40 border border-emerald-500/60 rounded"></span>
+          <span>탈출 완료 (완주)</span>
+        </div>
+        <div class="ml-auto text-stone-500">
+          * 매 10초마다 정체 여부를 계산합니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- 학생 전체 리스트 뷰 -->
+    <section class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
+      <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center justify-between">
+        <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
+        <span id="studentCount" class="text-xs bg-stone-900 border border-yellow-900/30 px-2 py-0.5 rounded text-amber-500">0명 참여 중</span>
+      </h2>
+      
+      <div class="space-y-3 overflow-y-auto max-h-[60vh] pr-2" id="studentList">
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Firebase Config
+    const CONFIG = {
+      FIREBASE: { apiKey: "AIzaSyBL5S89ZPrwPcxE0SNYOU-7wbkhesNBKkQ", authDomain: "hangeul-escape.firebaseapp.com", databaseURL: "https://hangeul-escape-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "hangeul-escape" }
+    };
+    
+    let db = null;
+    let currentClass = '1';
+    let studentsData = {};
+    const ROOM_NAMES = ['제1방 (창제)', '제2방 (규범)', '제3방 (보물)', '제4방 (한글날)', '최종 완주!'];
+    
+    const classSelect = document.getElementById('classSelect');
+    const mapRooms = document.getElementById('mapRooms');
+    const studentList = document.getElementById('studentList');
+    const studentCount = document.getElementById('studentCount');
+    
+    for(let i = 1; i <= 20; i++) {
+      const opt = document.createElement('option');
+      opt.value = i.toString();
+      opt.textContent = `${i}반`;
+      classSelect.appendChild(opt);
+    }
+    
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+    
+    const classParam = getQueryParam('class');
+    if (classParam && parseInt(classParam, 10) >= 1 && parseInt(classParam, 10) <= 20) {
+      currentClass = classParam;
+    } else {
+      currentClass = '1';
+    }
+    classSelect.value = currentClass;
+    
+    classSelect.addEventListener('change', (e) => {
+      currentClass = e.target.value;
+      const newUrl = `${window.location.origin}${window.location.pathname}?class=${currentClass}`;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+      connectFirebase();
+    });
+    
+    function initFirebase() {
+      if (CONFIG.FIREBASE && CONFIG.FIREBASE.databaseURL) {
+        try {
+          firebase.initializeApp(CONFIG.FIREBASE);
+          db = firebase.database();
+          connectFirebase();
+        } catch (e) {
+          console.error("Firebase 초기화 에러:", e);
+          renderError("Firebase 연동 실패. 설정을 확인하세요.");
+        }
+      } else {
+        renderError("Firebase databaseURL이 비어 있습니다. 설정을 채워주세요.");
+      }
+    }
+    
+    let fbRef = null;
+    function connectFirebase() {
+      if (fbRef) {
+        fbRef.off();
+      }
+      
+      studentsData = {};
+      renderDashboard();
+      
+      fbRef = db.ref('classes/' + currentClass);
+      fbRef.on('value', (snapshot) => {
+        studentsData = snapshot.val() || {};
+        renderDashboard();
+      }, (error) => {
+        console.error("Firebase 수신 에러:", error);
+        renderError("실시간 데이터 연결 오류가 발생했습니다.");
+      });
+    }
+    
+    function renderError(msg) {
+      studentList.innerHTML = `<div class="text-red-400 text-sm p-4 text-center border border-red-950/40 bg-red-950/10 rounded">${msg}</div>`;
+      mapRooms.innerHTML = `<div class="col-span-5 text-stone-500 text-sm text-center p-8">데이터를 불러올 수 없습니다.</div>`;
+    }
+    
+    function renderDashboard() {
+      const students = [];
+      for (const key in studentsData) {
+        if (studentsData[key] && typeof studentsData[key] === 'object') {
+          students.push(studentsData[key]);
+        }
+      }
+      students.sort((a, b) => (a.number || 0) - (b.number || 0));
+      
+      studentCount.textContent = `${students.length}명 참여 중`;
+      
+      const roomSections = [];
+      for (let i = 0; i < 5; i++) {
+        roomSections.push({
+          title: ROOM_NAMES[i],
+          students: []
+        });
+      }
+      
+      if (students.length === 0) {
+        studentList.innerHTML = `<div class="text-stone-500 text-center py-10 text-sm">참여 중인 학생이 없습니다.</div>`;
+      } else {
+        let listHTML = '';
+        const now = Date.now();
+        
+        students.forEach(st => {
+          const roomIdx = Math.min(4, st.currentRoom !== undefined ? st.currentRoom : 0);
+          const isFinished = st.progressRate >= 100;
+          
+          const targetRoomIdx = isFinished ? 4 : roomIdx;
+          roomSections[targetRoomIdx].students.push(st);
+          
+          const lastActive = st.lastUpdated || now;
+          const idleTimeMs = now - lastActive;
+          const isStagnant = !isFinished && idleTimeMs >= 180000;
+          
+          const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const minutesAgo = Math.floor(idleTimeMs / 60000);
+          const idleWarning = isStagnant ? `<span class="text-xs text-red-400 font-bold animate-pulse">⚠️ ${minutesAgo}분 동안 멈춤</span>` : '';
+          
+          let cardClass = "bg-stone-900 border border-yellow-900/10 p-3.5 rounded-lg";
+          if (isFinished) {
+            cardClass = "bg-emerald-950/20 border border-emerald-500/30 p-3.5 rounded-lg";
+          } else if (isStagnant) {
+            cardClass = "bg-red-950/20 border border-red-500/50 p-3.5 rounded-lg stagnant-pulse";
+          }
+          
+          listHTML += `
+            <div class="${cardClass} transition-colors duration-300">
+              <div class="flex justify-between items-start mb-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-stone-400 font-mono text-sm">${st.number}번</span>
+                  <span class="font-bold text-stone-200">${st.name}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs ${isFinished ? 'text-emerald-400' : 'text-amber-500'} font-semibold">${st.progressRate}%</span>
+                </div>
+              </div>
+              
+              <div class="w-full bg-stone-950 rounded-full h-1.5 mb-2.5 overflow-hidden">
+                <div class="h-1.5 rounded-full ${isFinished ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${st.progressRate}%"></div>
+              </div>
+              
+              <div class="flex justify-between items-center text-xs text-stone-400">
+                <span class="truncate max-w-[150px]">${st.currentRoomName || ROOM_NAMES[roomIdx]}</span>
+                <span class="text-[10px] text-stone-500">${timeStr} ${idleWarning}</span>
+              </div>
+              
+              <div class="mt-1 text-[11px] text-amber-600/80 truncate">
+                ${st.currentStep || ''}
+              </div>
+            </div>
+          `;
+        });
+        
+        studentList.innerHTML = listHTML;
+      }
+      
+      let mapHTML = '';
+      const now = Date.now();
+      
+      roomSections.forEach((section, idx) => {
+        const isLast = idx === 4;
+        let bgClass = "bg-stone-900/60 border border-yellow-900/10";
+        let headerColor = "text-amber-500";
+        if (isLast) {
+          bgClass = "bg-emerald-950/10 border border-emerald-500/20";
+          headerColor = "text-emerald-400 font-bold";
+        }
+        
+        mapHTML += `
+          <div class="flex flex-col min-h-[160px] ${bgClass} rounded-xl p-3.5 transition-all duration-300">
+            <h3 class="text-sm font-semibold ${headerColor} border-b border-stone-800/40 pb-2 mb-3 truncate flex justify-between items-center">
+              <span>${section.title}</span>
+              <span class="bg-stone-950 px-1.5 py-0.5 rounded text-[11px]">${section.students.length}명</span>
+            </h3>
+            <div class="flex flex-col gap-2 flex-grow overflow-y-auto max-h-[220px]" id="roomSlots_${idx}">
+        `;
+        
+        if (section.students.length === 0) {
+          mapHTML += `<div class="text-stone-600 text-xs text-center my-auto italic">비어 있음</div>`;
+        } else {
+          section.students.forEach(st => {
+            const isFinished = st.progressRate >= 100;
+            const lastActive = st.lastUpdated || now;
+            const isStagnant = !isFinished && (now - lastActive >= 180000);
+            
+            let chipClass = "bg-stone-850 border border-yellow-900/30 text-stone-300";
+            if (isFinished) {
+              chipClass = "bg-emerald-900/30 border border-emerald-500/40 text-emerald-300 font-medium";
+            } else if (isStagnant) {
+              chipClass = "bg-red-950/40 border border-red-500/70 text-red-300 font-medium stagnant-pulse";
+            }
+            
+            mapHTML += `
+              <div class="flex items-center gap-1.5 p-1.5 rounded-lg text-xs ${chipClass} shadow-md transition-all duration-300 hover:scale-[1.02] cursor-default" title="학습 단계: ${st.currentStep || '없음'}">
+                <span class="font-mono opacity-60 text-[10px] bg-stone-950/50 px-1 rounded">${st.number}번</span>
+                <span class="truncate font-semibold">${st.name}</span>
+                ${isStagnant ? '<span class="ml-auto animate-pulse">⏰</span>' : ''}
+              </div>
+            `;
+          });
+        }
+        
+        mapHTML += `
+            </div>
+          </div>
+        `;
+      });
+      
+      mapRooms.innerHTML = mapHTML;
+    }
+    
+    setInterval(() => {
+      if (studentsData && Object.keys(studentsData).length > 0) {
+        renderDashboard();
+      }
+    }, 10000);
+    
+    initFirebase();
+  </script>
+</body>
+</html>
