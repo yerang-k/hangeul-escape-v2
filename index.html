@@ -189,26 +189,6 @@
   <div style="display:flex;gap:8px;margin-bottom:8px">
     <select class="fld" id="classIn" style="flex:1;margin:0">
       <option value="">-- 반 선택 --</option>
-      <option value="1">1반</option>
-      <option value="2">2반</option>
-      <option value="3">3반</option>
-      <option value="4">4반</option>
-      <option value="5">5반</option>
-      <option value="6">6반</option>
-      <option value="7">7반</option>
-      <option value="8">8반</option>
-      <option value="9">9반</option>
-      <option value="10">10반</option>
-      <option value="11">11반</option>
-      <option value="12">12반</option>
-      <option value="13">13반</option>
-      <option value="14">14반</option>
-      <option value="15">15반</option>
-      <option value="16">16반</option>
-      <option value="17">17반</option>
-      <option value="18">18반</option>
-      <option value="19">19반</option>
-      <option value="20">20반</option>
     </select>
     <input class="fld" id="numIn" type="number" min="1" max="50" placeholder="번호" style="flex:1;margin:0" inputmode="numeric">
   </div>
@@ -576,6 +556,18 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
 
 /* ---------- 세팅 화면 ---------- */
 (function setupScreen(){
+  const clIn = $('#classIn');
+  if (clIn) {
+    for (let grade = 1; grade <= 3; grade++) {
+      for (let cls = 1; cls <= 10; cls++) {
+        const val = `${grade}-${cls}`;
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = `${grade}학년 ${cls}반`;
+        clIn.appendChild(opt);
+      }
+    }
+  }
   const sw=$('#swatches');
   SHIRTS.forEach((c,i)=>{const d=document.createElement('div');d.className='sw'+(i===0?' on':'');
     d.style.background='#'+c.toString(16).padStart(6,'0');

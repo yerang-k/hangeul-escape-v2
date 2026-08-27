@@ -38,7 +38,7 @@
     }
   </style>
 </head>
-<body class="p-4 md:p-6 max-w-7xl mx-auto">
+<body class="p-4 md:p-6 max-w-[1600px] mx-auto transition-all duration-300">
   <!-- 상단 헤더 -->
   <header class="flex flex-col md:flex-row justify-between items-center border-b border-yellow-900/30 pb-4 mb-6 gap-4">
     <div class="flex items-center gap-3">
@@ -50,25 +50,30 @@
     </div>
     
     <!-- 반 선택 드롭다운 -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
       <label for="classSelect" class="text-sm font-semibold text-amber-500/80 myeongjo">학급 선택:</label>
       <select id="classSelect" class="bg-stone-900 border border-yellow-900/50 text-amber-300 rounded px-3 py-1.5 focus:outline-none focus:border-amber-500">
       </select>
+      
+      <!-- 리스트뷰 토글 버튼 -->
+      <button id="toggleListBtn" class="bg-stone-850 hover:bg-stone-800 border border-yellow-900/40 text-amber-400 text-xs px-3.5 py-1.5 rounded transition-all flex items-center gap-1.5 shadow">
+        <span>📋</span> <span id="toggleText">현황판 접기</span>
+      </button>
     </div>
   </header>
 
   <!-- 메인 모니터링 패널 -->
-  <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- 실시간 공간 조감도 뷰 (2열 차지) -->
-    <section class="lg:col-span-2 space-y-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 transition-all duration-300" id="mainGrid">
+    <!-- 실시간 공간 조감도 뷰 (토글에 따라 2열 또는 3열 전체 차지) -->
+    <section class="lg:col-span-2 space-y-6 transition-all duration-300" id="mapSection">
       <div class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
         <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center justify-between">
           <span>🗺️ 실시간 2D 조감도 미니맵</span>
-          <span class="text-xs text-stone-500 font-normal">* 월드 스케일 1:1 좌표 매핑 적용</span>
+          <span class="text-xs text-stone-500 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
         </h2>
         
         <!-- 4개 방 조감도 그리드 (2x2) -->
-        <div class="grid grid-cols-2 gap-4" id="roomMapsGrid">
+        <div class="grid grid-cols-2 gap-5" id="roomMapsGrid">
           <!-- 스크립트에서 각 방의 조감도가 생성됩니다. -->
         </div>
 
@@ -84,7 +89,7 @@
       </div>
       
       <!-- 요약 정보 / 범례 -->
-      <div class="bg-stone-950/40 border border-yellow-900/10 rounded-xl p-4 flex flex-wrap gap-4 text-xs text-stone-400">
+      <div class="bg-stone-950/40 border border-yellow-900/10 rounded-xl p-4 flex flex-wrap gap-5 text-xs text-stone-400">
         <div class="flex items-center gap-1.5">
           <span class="inline-block w-3.5 h-3.5 bg-amber-500 border border-amber-400/40 rounded-full"></span>
           <span>진행 중 학생</span>
@@ -98,13 +103,13 @@
           <span>최종 완주자</span>
         </div>
         <div class="ml-auto text-stone-500">
-          * 학생의 실제 움직임에 따라 1초 단위로 대시보드 칩이 동적으로 이동합니다.
+          * 대시보드 칩은 학생이 움직일 때마다 1초 간격으로 물 흐르듯 이동합니다.
         </div>
       </div>
     </section>
 
     <!-- 학생 전체 리스트 뷰 (1열 차지) -->
-    <section class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
+    <section class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl transition-all duration-300" id="listSection">
       <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center justify-between">
         <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
         <span id="studentCount" class="text-xs bg-stone-900 border border-yellow-900/30 px-2 py-0.5 rounded text-amber-500">0명 참여 중</span>
@@ -113,7 +118,7 @@
       <div class="space-y-3 overflow-y-auto max-h-[75vh] pr-2" id="studentList">
       </div>
     </section>
-  </main>
+  </div>
 
   <script>
     // Firebase Config
@@ -122,7 +127,7 @@
     };
     
     let db = null;
-    let currentClass = '1';
+    let currentClass = '1-1';
     let studentsData = {};
     const ROOM_NAMES = ['제1방 (창제의 방)', '제2방 (규범의 방)', '제3방 (보물의 방)', '제4방 (한글날의 방)'];
     
@@ -138,30 +143,103 @@
       [{x:0,z:-7,w:12,d:1.6},{x:-6,z:-2,w:1.6,d:10},{x:6,z:-2,w:1.6,d:10}]
     ];
 
+    // 방별 가구 목록 및 실제 좌표 규격 (x, z, w, d) - 문제 여부는 마킹하지 않음
+    const ROOM_FURNITURES = [
+      // 1방
+      [
+        { name: '서안', build: 'desk', x: -9, z: -9, w: 3.0, d: 1.8 },
+        { name: '족자', build: 'scroll', x: -8, z: -15.2, w: 2.2, d: 0.8 },
+        { name: '서랍장', build: 'drawer', x: 10, z: -11, w: 2.4, d: 1.6 },
+        { name: '서궤', build: 'chest', x: 12, z: 7, w: 2.6, d: 1.8 },
+        { name: '놋 항아리', build: 'jar', x: 13, z: -2, w: 1.8, d: 1.8 },
+        { name: '봉인 궤', build: 'chest', x: -13, z: -2, w: 2.6, d: 1.8 },
+        { name: '학사 👨‍🏫', build: 'npc', x: -4, z: 4, w: 1.8, d: 1.8 },
+        { name: '금고문 🔐', build: 'door', x: 0, z: 15.2, w: 3.6, d: 1.0 }
+      ],
+      // 2방
+      [
+        { name: '검사대', build: 'drawer', x: -12, z: -3, w: 2.4, d: 1.6 },
+        { name: '족자', build: 'scroll', x: 9, z: -15.2, w: 2.2, d: 0.8 },
+        { name: '표기대', build: 'desk', x: 12, z: 5, w: 3.0, d: 1.8 },
+        { name: '규정 궤', build: 'chest', x: -6, z: 10, w: 2.6, d: 1.8 },
+        { name: '항아리', build: 'jar', x: -13, z: 2, w: 1.8, d: 1.8 },
+        { name: '서류함', build: 'chest', x: 12, z: 3, w: 2.6, d: 1.8 },
+        { name: '규범관 🧐', build: 'npc', x: -4, z: 4, w: 1.8, d: 1.8 },
+        { name: '금고문 🔐', build: 'door', x: 0, z: 15.2, w: 3.6, d: 1.0 }
+      ],
+      // 3방
+      [
+        { name: '황금 단지', build: 'jar', x: -13, z: -5, w: 1.8, d: 1.8 },
+        { name: '두루마리', build: 'scroll', x: -6, z: -15.2, w: 2.2, d: 0.8 },
+        { name: '유물 서랍', build: 'drawer', x: 13, z: -9, w: 2.4, d: 1.6 },
+        { name: '청동 향로', build: 'jar', x: 12, z: 9, w: 1.8, d: 1.8 },
+        { name: '보물궤', build: 'chest', x: -11, z: 11, w: 2.6, d: 1.8 },
+        { name: '옥합', build: 'jar', x: 12, z: 3, w: 1.8, d: 1.8 },
+        { name: '지킴이 🧙', build: 'npc', x: -4, z: 4, w: 1.8, d: 1.8 },
+        { name: '금고문 🔐', build: 'door', x: 0, z: 15.2, w: 3.6, d: 1.0 }
+      ],
+      // 4방
+      [
+        { name: '기념 서안', build: 'desk', x: -10, z: -8, w: 3.0, d: 1.8 },
+        { name: '선언 족자', build: 'scroll', x: 0, z: -15.2, w: 2.2, d: 0.8 },
+        { name: '간송의 궤', build: 'chest', x: 11, z: -6, w: 2.6, d: 1.8 },
+        { name: '글자 서랍', build: 'drawer', x: 9, z: 9, w: 2.4, d: 1.6 },
+        { name: '달력 단지', build: 'jar', x: -13, z: 2, w: 1.8, d: 1.8 },
+        { name: '연대기', build: 'chest', x: 13, z: 2, w: 2.6, d: 1.8 },
+        { name: '지킴이 📖', build: 'npc', x: -4, z: 4, w: 1.8, d: 1.8 },
+        { name: '최후금고문 🔐', build: 'door', x: 0, z: 15.2, w: 3.6, d: 1.0 }
+      ]
+    ];
+
     const classSelect = document.getElementById('classSelect');
     const roomMapsGrid = document.getElementById('roomMapsGrid');
     const winRoomArea = document.getElementById('winRoomArea');
     const studentList = document.getElementById('studentList');
     const studentCount = document.getElementById('studentCount');
+    const toggleListBtn = document.getElementById('toggleListBtn');
+    const toggleText = document.getElementById('toggleText');
+    const mainGrid = document.getElementById('mainGrid');
+    const mapSection = document.getElementById('mapSection');
+    const listSection = document.getElementById('listSection');
     
-    // 반 선택 바인딩 (1~20반)
-    for(let i = 1; i <= 20; i++) {
-      const opt = document.createElement('option');
-      opt.value = i.toString();
-      opt.textContent = `${i}반`;
-      classSelect.appendChild(opt);
+    // 학급 선택 드롭다운 생성 (1~3학년, 학년당 1~10반)
+    for(let grade = 1; grade <= 3; grade++) {
+      for(let cls = 1; cls <= 10; cls++) {
+        const val = `${grade}-${cls}`;
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = `${grade}학년 ${cls}반`;
+        classSelect.appendChild(opt);
+      }
     }
     
+    // 리스트 뷰 접기/펴기 토글 핸들러
+    let isCollapsed = false;
+    toggleListBtn.addEventListener('click', () => {
+      isCollapsed = !isCollapsed;
+      if (isCollapsed) {
+        listSection.classList.add('hidden');
+        mapSection.classList.replace('lg:col-span-2', 'lg:col-span-3');
+        toggleText.textContent = "현황판 펴기";
+      } else {
+        listSection.classList.remove('hidden');
+        mapSection.classList.replace('lg:col-span-3', 'lg:col-span-2');
+        toggleText.textContent = "현황판 접기";
+      }
+      // 그리드가 넓어질 때 칩들 위치 재계산을 위해 다시 그리기 유발
+      setTimeout(renderDashboard, 100);
+    });
+
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
     
     const classParam = getQueryParam('class');
-    if (classParam && parseInt(classParam, 10) >= 1 && parseInt(classParam, 10) <= 20) {
+    if (classParam && /^[1-3]-[1-9][0-9]?$/.test(classParam)) {
       currentClass = classParam;
     } else {
-      currentClass = '1';
+      currentClass = '1-1';
     }
     classSelect.value = currentClass;
     
@@ -172,41 +250,71 @@
       connectFirebase();
     });
     
-    // 2D 조감도 레이아웃 동적 드로잉
+    // 2D 조감도 레이아웃 그리기 (장애물 회색 벽 + 갈색 가구 배치)
     function drawBaseMap() {
       let mapsHTML = '';
       for (let i = 0; i < 4; i++) {
         mapsHTML += `
-          <div class="relative bg-stone-950 border-2 border-stone-800 rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-inner" id="roomMapBox_${i}">
+          <div class="relative bg-stone-950 border-2 border-stone-850 rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-2xl" id="roomMapBox_${i}">
             <!-- 방 라벨 -->
-            <div class="absolute top-2 left-2 z-10 text-[11px] font-bold text-amber-500 bg-stone-900/90 border border-yellow-900/30 px-1.5 py-0.5 rounded shadow">
+            <div class="absolute top-2.5 left-2.5 z-10 text-[11px] font-bold text-amber-500 bg-stone-900/95 border border-yellow-900/40 px-2 py-0.5 rounded shadow-lg">
               ${ROOM_NAMES[i]}
             </div>
             
-            <!-- 3D 좌표 기준 바닥 중심선 가이드 (원점 중심) -->
-            <div class="absolute inset-0 border border-dashed border-stone-900/40 pointer-events-none z-0"></div>
+            <!-- 3D 좌표 격자 가이드 -->
+            <div class="absolute inset-0 border border-dashed border-stone-900/20 pointer-events-none z-0"></div>
             
-            <!-- 장애물 그리기 영역 -->
+            <!-- 1) 고체 장애물 벽 그리기 -->
             <div class="absolute inset-0 pointer-events-none z-0">
         `;
         
-        // 해당 방의 장애물 목록 그리기
         const blocks = ROOM_BLOCKS[i] || [];
         blocks.forEach(b => {
-          // 3D 좌표 범위 (-16 ~ +16)를 2D 픽셀 범위 (0% ~ 100%)로 변환
           const left = ((b.x - b.w/2 + 16) / 32) * 100;
           const top = ((b.z - b.d/2 + 16) / 32) * 100;
           const width = (b.w / 32) * 100;
           const height = (b.d / 32) * 100;
-          
           mapsHTML += `
-            <div class="absolute bg-stone-800 border border-stone-700/50 rounded" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
+            <div class="absolute bg-stone-800 border border-stone-700/60 rounded" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
           `;
         });
         
         mapsHTML += `
             </div>
-            <!-- 학생 칩이 그려지는 컨테이너 영역 -->
+            
+            <!-- 2) 가구들 세부 위치 그리기 -->
+            <div class="absolute inset-0 pointer-events-none z-10">
+        `;
+        
+        const furns = ROOM_FURNITURES[i] || [];
+        furns.forEach(f => {
+          const left = ((f.x - f.w/2 + 16) / 32) * 100;
+          const top = ((f.z - f.d/2 + 16) / 32) * 100;
+          const width = (f.w / 32) * 100;
+          const height = (f.d / 32) * 100;
+          
+          let styleClass = "bg-amber-950/20 border border-yellow-800/45 text-yellow-600/70 rounded";
+          if (f.build === 'jar') {
+            styleClass = "bg-stone-900/40 border border-yellow-800/40 rounded-full text-yellow-600/70";
+          } else if (f.build === 'scroll') {
+            styleClass = "bg-yellow-950/15 border-b border-yellow-800/50 text-yellow-600/60";
+          } else if (f.build === 'npc') {
+            styleClass = "bg-emerald-950/20 border border-emerald-800/50 text-emerald-500/80 rounded-full font-bold";
+          } else if (f.build === 'door') {
+            styleClass = "bg-red-950/15 border border-red-900/40 text-red-500/70 font-bold";
+          }
+          
+          mapsHTML += `
+            <div class="absolute flex flex-col items-center justify-center text-[8px] overflow-hidden leading-none ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
+              <span class="scale-90 transform origin-center text-center font-medium truncate max-w-full px-0.5">${f.name}</span>
+            </div>
+          `;
+        });
+        
+        mapsHTML += `
+            </div>
+            
+            <!-- 3) 학생 칩들이 움직이는 컨테이너 -->
             <div class="absolute inset-0 z-20" id="roomMapChips_${i}"></div>
           </div>
         `;
@@ -254,7 +362,6 @@
       roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 text-sm text-center p-8 border border-stone-800 bg-stone-950/20 rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
     
-    // 학생의 이전 방 위치를 로컬 메모리에 기록하여 방 이동 시의 칩 튀기 방지
     const prevRooms = {};
     
     function renderDashboard() {
@@ -268,15 +375,12 @@
       
       studentCount.textContent = `${students.length}명 참여 중`;
       
-      // 방 내부 칩들 초기화 준비
+      // 컨테이너 정리
       const roomChipContainers = [];
       for (let i = 0; i < 4; i++) {
         const container = document.getElementById(`roomMapChips_${i}`);
         if (container) {
-          roomChipContainers.push({
-            el: container,
-            html: ''
-          });
+          roomChipContainers.push(container);
         }
       }
       
@@ -289,12 +393,11 @@
         const roomIdx = Math.min(3, st.currentRoom !== undefined ? st.currentRoom : 0);
         const isFinished = st.progressRate >= 100;
         
-        // 정체 여부 계산 (3분 = 180,000ms)
         const lastActive = st.lastUpdated || now;
         const idleTimeMs = now - lastActive;
         const isStagnant = !isFinished && idleTimeMs >= 180000;
         
-        // 1) 리스트 뷰 HTML 작성
+        // 1) 리스트 뷰 HTML
         const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const minutesAgo = Math.floor(idleTimeMs / 60000);
         const idleWarning = isStagnant ? `<span class="text-xs text-red-400 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
@@ -328,9 +431,8 @@
           </div>
         `;
         
-        // 2) 조감도 칩 배치 또는 완주 리스트 분류
+        // 2) 조감도 학생 칩 그리기
         if (isFinished) {
-          // 완주 구역 추가
           hasWin = true;
           winHTML += `
             <div class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-emerald-900/20 border border-emerald-500/40 text-emerald-300 font-bold shadow-md">
@@ -340,35 +442,29 @@
             </div>
           `;
           
-          // 조감도에 배치되었던 기존 칩 제거 (완주 시 조감도 맵에서 사라짐)
           const oldChip = document.getElementById(`student_chip_${st.number}`);
           if (oldChip) {
             oldChip.remove();
           }
         } else {
-          // 현재 방 조감도 좌표 매핑 (x, z 범위: -16 ~ +16)
           const px = st.x !== undefined ? st.x : 0;
-          const pz = st.z !== undefined ? st.z : 7; // 기본 시작 좌표인 7 부근
+          const pz = st.z !== undefined ? st.z : 7;
           
-          // 백분율 좌표 변환 ( Three.js의 z 좌표가 2D 맵의 top/y좌표에 대치 )
           const leftPercent = ((px + 16) / 32) * 100;
           const topPercent = ((pz + 16) / 32) * 100;
           
-          // 방 변경 여부 체크 (방이 바뀌었으면 날아가지 않고 즉시이동 처리)
           const prevRoom = prevRooms[st.number];
           const isRoomChanged = prevRoom !== undefined && prevRoom !== roomIdx;
           prevRooms[st.number] = roomIdx;
           
-          // DOM 직접 조작으로 칩 이동 처리 (부드러운 transition 적용)
           let chip = document.getElementById(`student_chip_${st.number}`);
           if (!chip) {
             chip = document.createElement('div');
             chip.id = `student_chip_${st.number}`;
             chip.className = `student-chip absolute select-none pointer-events-auto z-30 transform -translate-x-1/2 -translate-y-1/2 flex items-center shadow-lg`;
-            document.body.appendChild(chip); // 임시 등록 후 아래에서 컨테이너로 이동시킴
+            document.body.appendChild(chip);
           }
           
-          // 칩 스타일 클래스
           let colorClass = "bg-amber-400 border border-stone-950 text-stone-950 font-extrabold";
           if (isStagnant) {
             colorClass = "bg-red-600 border border-stone-950 text-white font-extrabold stagnant-pulse";
@@ -381,24 +477,20 @@
             </div>
           `;
           
-          // 방이 바뀐 경우 트랜지션을 강제로 잠시 해제하여 뿅 날아가지 않게 함
           if (isRoomChanged) {
             chip.classList.add('no-transition');
           } else {
             chip.classList.remove('no-transition');
           }
           
-          // 칩의 좌표 갱신
           chip.style.left = `${leftPercent}%`;
           chip.style.top = `${topPercent}%`;
           
-          // 강제 리플로우 유발 후 방 이동 시 트랜지션 복원
           if (isRoomChanged) {
             void chip.offsetWidth;
             chip.classList.remove('no-transition');
           }
           
-          // 해당 방 컨테이너로 소속 이동
           const targetContainer = document.getElementById(`roomMapChips_${roomIdx}`);
           if (targetContainer && chip.parentNode !== targetContainer) {
             targetContainer.appendChild(chip);
@@ -406,11 +498,9 @@
         }
       });
       
-      // 화면 갱신
       studentList.innerHTML = listHTML || `<div class="text-stone-500 text-center py-10 text-sm">참여 중인 학생이 없습니다.</div>`;
       winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-600 text-xs my-auto italic">아직 완주한 학생이 없습니다.</div>`;
       
-      // 데이터 목록에 존재하지 않는(나간) 학생들의 칩 자동 청소
       const existingChips = document.querySelectorAll('.student-chip');
       existingChips.forEach(chip => {
         const num = parseInt(chip.id.replace('student_chip_', ''), 10);
@@ -421,7 +511,6 @@
       });
     }
     
-    // 정체 알림 실시간 동기화 업데이트용 타이머 (10초에 한번 새로고침)
     setInterval(() => {
       if (studentsData && Object.keys(studentsData).length > 0) {
         renderDashboard();
