@@ -457,16 +457,22 @@
             document.body.appendChild(chip);
           }
           
-          // 칩 가독성 극대화 (고명도 파란색 / 경고 빨간색)
-          let colorClass = "bg-blue-600 border-2 border-white text-white font-extrabold";
+          let colorClass = "bg-[#ffd54f] border border-[#5c4033] text-[#2b1f15] font-black";
           if (isStagnant) {
-            colorClass = "bg-red-650 border-2 border-white text-white font-extrabold stagnant-pulse";
+            colorClass = "bg-[#d32f2f] border border-[#ffd54f] text-white font-black stagnant-pulse";
+          }
+          
+          let numberSpan = `<span class="font-mono text-[9px] bg-[#5c4033]/15 text-[#2b1f15] px-1 rounded font-bold">${st.number}</span>`;
+          let textSpan = `<span class="text-xs text-[#2b1f15] font-extrabold">${st.name}</span>`;
+          if (isStagnant) {
+            numberSpan = `<span class="font-mono text-[9px] bg-white/20 text-white px-1 rounded font-bold">${st.number}</span>`;
+            textSpan = `<span class="text-xs text-white font-extrabold">${st.name}</span>`;
           }
           
           chip.innerHTML = `
-            <div class="px-2 py-0.5 rounded-full text-xs ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
-              <span class="font-mono text-[9px] bg-white/20 px-0.5 rounded">${st.number}</span>
-              <span>${st.name}</span>
+            <div class="px-2.5 py-1 rounded-full text-xs ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
+              ${numberSpan}
+              ${textSpan}
             </div>
           `;
           

@@ -789,7 +789,7 @@ function cyl(rt,rb,h,c){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,
 /* 텍스트 스프라이트(이름표·마커) */
 function textSprite(text,color){
   const cv=document.createElement('canvas');cv.width=256;cv.height=96;const ctx=cv.getContext('2d');
-  ctx.font='bold 54px "Noto Serif KR",serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='bold 54px "Nanum Myeongjo", "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.lineWidth=8;ctx.strokeStyle='rgba(0,0,0,.75)';ctx.strokeText(text,128,50);
   ctx.fillStyle=color||'#f3e6cf';ctx.fillText(text,128,50);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
