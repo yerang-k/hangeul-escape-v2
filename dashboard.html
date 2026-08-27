@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>훈민정음 대탈출 — 교사용 모니터링 대시보드</title>
+  <title>훈민정음 대탈출 — 교사용 실시간 조감도 대시보드</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -30,8 +30,11 @@
         box-shadow: 0 0 16px #ef4444;
       }
     }
-    .chip-transition {
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    .student-chip {
+      transition: left 0.9s linear, top 0.9s linear;
+    }
+    .no-transition {
+      transition: none !important;
     }
   </style>
 </head>
@@ -42,7 +45,7 @@
       <span class="text-4xl">👨‍🏫</span>
       <div>
         <h1 class="text-2xl font-bold text-amber-500 myeongjo">훈민정음 대탈출</h1>
-        <p class="text-xs text-amber-600/70">실시간 학급별 모니터링 대시보드</p>
+        <p class="text-xs text-amber-600/70">실시간 학급별 조감도 모니터링 대시보드</p>
       </div>
     </div>
     
@@ -56,45 +59,58 @@
 
   <!-- 메인 모니터링 패널 -->
   <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- 실시간 공간 맵 뷰 -->
+    <!-- 실시간 공간 조감도 뷰 (2열 차지) -->
     <section class="lg:col-span-2 space-y-6">
       <div class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
-        <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center gap-2">
-          <span>🗺️</span> 실시간 배치 맵 (공간 뷰)
+        <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center justify-between">
+          <span>🗺️ 실시간 2D 조감도 미니맵</span>
+          <span class="text-xs text-stone-500 font-normal">* 월드 스케일 1:1 좌표 매핑 적용</span>
         </h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4" id="mapRooms">
+        <!-- 4개 방 조감도 그리드 (2x2) -->
+        <div class="grid grid-cols-2 gap-4" id="roomMapsGrid">
+          <!-- 스크립트에서 각 방의 조감도가 생성됩니다. -->
+        </div>
+
+        <!-- 최종 완주 성공 구역 -->
+        <div class="mt-6 border-t border-yellow-900/20 pt-4">
+          <h3 class="text-sm font-bold text-emerald-400 myeongjo mb-3 flex items-center gap-1.5">
+            <span>🎉</span> 최종 탈출 성공 명단
+          </h3>
+          <div class="bg-stone-900/40 border border-emerald-950 rounded-xl p-4 flex flex-wrap gap-2 min-h-[60px]" id="winRoomArea">
+            <div class="text-stone-600 text-xs my-auto italic">아직 완주한 학생이 없습니다.</div>
+          </div>
         </div>
       </div>
       
       <!-- 요약 정보 / 범례 -->
       <div class="bg-stone-950/40 border border-yellow-900/10 rounded-xl p-4 flex flex-wrap gap-4 text-xs text-stone-400">
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-amber-500/10 border border-amber-500/40 rounded"></span>
-          <span>정상 진행 학생</span>
+          <span class="inline-block w-3.5 h-3.5 bg-amber-500 border border-amber-400/40 rounded-full"></span>
+          <span>진행 중 학생</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-red-950/40 border border-red-500/60 rounded stagnant-pulse"></span>
-          <span>3분 이상 정체 (집중 도움 필요)</span>
+          <span class="inline-block w-3.5 h-3.5 bg-red-600 border border-red-500 rounded-full stagnant-pulse"></span>
+          <span>3분 이상 정체 (집중 필요)</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-emerald-950/40 border border-emerald-500/60 rounded"></span>
-          <span>탈출 완료 (완주)</span>
+          <span class="inline-block w-3.5 h-3.5 bg-emerald-600 border border-emerald-400 rounded"></span>
+          <span>최종 완주자</span>
         </div>
         <div class="ml-auto text-stone-500">
-          * 매 10초마다 정체 여부를 계산합니다.
+          * 학생의 실제 움직임에 따라 1초 단위로 대시보드 칩이 동적으로 이동합니다.
         </div>
       </div>
     </section>
 
-    <!-- 학생 전체 리스트 뷰 -->
+    <!-- 학생 전체 리스트 뷰 (1열 차지) -->
     <section class="bg-stone-950/80 border border-yellow-900/20 rounded-xl p-5 shadow-2xl">
       <h2 class="text-lg font-bold text-amber-400 myeongjo mb-4 flex items-center justify-between">
         <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
         <span id="studentCount" class="text-xs bg-stone-900 border border-yellow-900/30 px-2 py-0.5 rounded text-amber-500">0명 참여 중</span>
       </h2>
       
-      <div class="space-y-3 overflow-y-auto max-h-[60vh] pr-2" id="studentList">
+      <div class="space-y-3 overflow-y-auto max-h-[75vh] pr-2" id="studentList">
       </div>
     </section>
   </main>
@@ -108,13 +124,27 @@
     let db = null;
     let currentClass = '1';
     let studentsData = {};
-    const ROOM_NAMES = ['제1방 (창제)', '제2방 (규범)', '제3방 (보물)', '제4방 (한글날)', '최종 완주!'];
+    const ROOM_NAMES = ['제1방 (창제의 방)', '제2방 (규범의 방)', '제3방 (보물의 방)', '제4방 (한글날의 방)'];
     
+    // 3D 맵 실제 장애물 정보 (x, z, w, d)
+    const ROOM_BLOCKS = [
+      // 1방
+      [{x:2,z:-2,w:1.6,d:18}],
+      // 2방
+      [{x:-3,z:-1,w:12,d:1.6},{x:6,z:-8,w:1.6,d:12}],
+      // 3방
+      [{x:-5,z:-6,w:1.6,d:14},{x:6,z:-6,w:1.6,d:14}],
+      // 4방
+      [{x:0,z:-7,w:12,d:1.6},{x:-6,z:-2,w:1.6,d:10},{x:6,z:-2,w:1.6,d:10}]
+    ];
+
     const classSelect = document.getElementById('classSelect');
-    const mapRooms = document.getElementById('mapRooms');
+    const roomMapsGrid = document.getElementById('roomMapsGrid');
+    const winRoomArea = document.getElementById('winRoomArea');
     const studentList = document.getElementById('studentList');
     const studentCount = document.getElementById('studentCount');
     
+    // 반 선택 바인딩 (1~20반)
     for(let i = 1; i <= 20; i++) {
       const opt = document.createElement('option');
       opt.value = i.toString();
@@ -142,11 +172,54 @@
       connectFirebase();
     });
     
+    // 2D 조감도 레이아웃 동적 드로잉
+    function drawBaseMap() {
+      let mapsHTML = '';
+      for (let i = 0; i < 4; i++) {
+        mapsHTML += `
+          <div class="relative bg-stone-950 border-2 border-stone-800 rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-inner" id="roomMapBox_${i}">
+            <!-- 방 라벨 -->
+            <div class="absolute top-2 left-2 z-10 text-[11px] font-bold text-amber-500 bg-stone-900/90 border border-yellow-900/30 px-1.5 py-0.5 rounded shadow">
+              ${ROOM_NAMES[i]}
+            </div>
+            
+            <!-- 3D 좌표 기준 바닥 중심선 가이드 (원점 중심) -->
+            <div class="absolute inset-0 border border-dashed border-stone-900/40 pointer-events-none z-0"></div>
+            
+            <!-- 장애물 그리기 영역 -->
+            <div class="absolute inset-0 pointer-events-none z-0">
+        `;
+        
+        // 해당 방의 장애물 목록 그리기
+        const blocks = ROOM_BLOCKS[i] || [];
+        blocks.forEach(b => {
+          // 3D 좌표 범위 (-16 ~ +16)를 2D 픽셀 범위 (0% ~ 100%)로 변환
+          const left = ((b.x - b.w/2 + 16) / 32) * 100;
+          const top = ((b.z - b.d/2 + 16) / 32) * 100;
+          const width = (b.w / 32) * 100;
+          const height = (b.d / 32) * 100;
+          
+          mapsHTML += `
+            <div class="absolute bg-stone-800 border border-stone-700/50 rounded" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
+          `;
+        });
+        
+        mapsHTML += `
+            </div>
+            <!-- 학생 칩이 그려지는 컨테이너 영역 -->
+            <div class="absolute inset-0 z-20" id="roomMapChips_${i}"></div>
+          </div>
+        `;
+      }
+      roomMapsGrid.innerHTML = mapsHTML;
+    }
+    
     function initFirebase() {
       if (CONFIG.FIREBASE && CONFIG.FIREBASE.databaseURL) {
         try {
           firebase.initializeApp(CONFIG.FIREBASE);
           db = firebase.database();
+          drawBaseMap();
           connectFirebase();
         } catch (e) {
           console.error("Firebase 초기화 에러:", e);
@@ -178,8 +251,11 @@
     
     function renderError(msg) {
       studentList.innerHTML = `<div class="text-red-400 text-sm p-4 text-center border border-red-950/40 bg-red-950/10 rounded">${msg}</div>`;
-      mapRooms.innerHTML = `<div class="col-span-5 text-stone-500 text-sm text-center p-8">데이터를 불러올 수 없습니다.</div>`;
+      roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 text-sm text-center p-8 border border-stone-800 bg-stone-950/20 rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
+    
+    // 학생의 이전 방 위치를 로컬 메모리에 기록하여 방 이동 시의 칩 튀기 방지
+    const prevRooms = {};
     
     function renderDashboard() {
       const students = [];
@@ -192,128 +268,160 @@
       
       studentCount.textContent = `${students.length}명 참여 중`;
       
-      const roomSections = [];
-      for (let i = 0; i < 5; i++) {
-        roomSections.push({
-          title: ROOM_NAMES[i],
-          students: []
-        });
-      }
-      
-      if (students.length === 0) {
-        studentList.innerHTML = `<div class="text-stone-500 text-center py-10 text-sm">참여 중인 학생이 없습니다.</div>`;
-      } else {
-        let listHTML = '';
-        const now = Date.now();
-        
-        students.forEach(st => {
-          const roomIdx = Math.min(4, st.currentRoom !== undefined ? st.currentRoom : 0);
-          const isFinished = st.progressRate >= 100;
-          
-          const targetRoomIdx = isFinished ? 4 : roomIdx;
-          roomSections[targetRoomIdx].students.push(st);
-          
-          const lastActive = st.lastUpdated || now;
-          const idleTimeMs = now - lastActive;
-          const isStagnant = !isFinished && idleTimeMs >= 180000;
-          
-          const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          const minutesAgo = Math.floor(idleTimeMs / 60000);
-          const idleWarning = isStagnant ? `<span class="text-xs text-red-400 font-bold animate-pulse">⚠️ ${minutesAgo}분 동안 멈춤</span>` : '';
-          
-          let cardClass = "bg-stone-900 border border-yellow-900/10 p-3.5 rounded-lg";
-          if (isFinished) {
-            cardClass = "bg-emerald-950/20 border border-emerald-500/30 p-3.5 rounded-lg";
-          } else if (isStagnant) {
-            cardClass = "bg-red-950/20 border border-red-500/50 p-3.5 rounded-lg stagnant-pulse";
-          }
-          
-          listHTML += `
-            <div class="${cardClass} transition-colors duration-300">
-              <div class="flex justify-between items-start mb-1.5">
-                <div class="flex items-center gap-2">
-                  <span class="text-stone-400 font-mono text-sm">${st.number}번</span>
-                  <span class="font-bold text-stone-200">${st.name}</span>
-                </div>
-                <div class="text-right">
-                  <span class="text-xs ${isFinished ? 'text-emerald-400' : 'text-amber-500'} font-semibold">${st.progressRate}%</span>
-                </div>
-              </div>
-              
-              <div class="w-full bg-stone-950 rounded-full h-1.5 mb-2.5 overflow-hidden">
-                <div class="h-1.5 rounded-full ${isFinished ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${st.progressRate}%"></div>
-              </div>
-              
-              <div class="flex justify-between items-center text-xs text-stone-400">
-                <span class="truncate max-w-[150px]">${st.currentRoomName || ROOM_NAMES[roomIdx]}</span>
-                <span class="text-[10px] text-stone-500">${timeStr} ${idleWarning}</span>
-              </div>
-              
-              <div class="mt-1 text-[11px] text-amber-600/80 truncate">
-                ${st.currentStep || ''}
-              </div>
-            </div>
-          `;
-        });
-        
-        studentList.innerHTML = listHTML;
-      }
-      
-      let mapHTML = '';
-      const now = Date.now();
-      
-      roomSections.forEach((section, idx) => {
-        const isLast = idx === 4;
-        let bgClass = "bg-stone-900/60 border border-yellow-900/10";
-        let headerColor = "text-amber-500";
-        if (isLast) {
-          bgClass = "bg-emerald-950/10 border border-emerald-500/20";
-          headerColor = "text-emerald-400 font-bold";
-        }
-        
-        mapHTML += `
-          <div class="flex flex-col min-h-[160px] ${bgClass} rounded-xl p-3.5 transition-all duration-300">
-            <h3 class="text-sm font-semibold ${headerColor} border-b border-stone-800/40 pb-2 mb-3 truncate flex justify-between items-center">
-              <span>${section.title}</span>
-              <span class="bg-stone-950 px-1.5 py-0.5 rounded text-[11px]">${section.students.length}명</span>
-            </h3>
-            <div class="flex flex-col gap-2 flex-grow overflow-y-auto max-h-[220px]" id="roomSlots_${idx}">
-        `;
-        
-        if (section.students.length === 0) {
-          mapHTML += `<div class="text-stone-600 text-xs text-center my-auto italic">비어 있음</div>`;
-        } else {
-          section.students.forEach(st => {
-            const isFinished = st.progressRate >= 100;
-            const lastActive = st.lastUpdated || now;
-            const isStagnant = !isFinished && (now - lastActive >= 180000);
-            
-            let chipClass = "bg-stone-850 border border-yellow-900/30 text-stone-300";
-            if (isFinished) {
-              chipClass = "bg-emerald-900/30 border border-emerald-500/40 text-emerald-300 font-medium";
-            } else if (isStagnant) {
-              chipClass = "bg-red-950/40 border border-red-500/70 text-red-300 font-medium stagnant-pulse";
-            }
-            
-            mapHTML += `
-              <div class="flex items-center gap-1.5 p-1.5 rounded-lg text-xs ${chipClass} shadow-md transition-all duration-300 hover:scale-[1.02] cursor-default" title="학습 단계: ${st.currentStep || '없음'}">
-                <span class="font-mono opacity-60 text-[10px] bg-stone-950/50 px-1 rounded">${st.number}번</span>
-                <span class="truncate font-semibold">${st.name}</span>
-                ${isStagnant ? '<span class="ml-auto animate-pulse">⏰</span>' : ''}
-              </div>
-            `;
+      // 방 내부 칩들 초기화 준비
+      const roomChipContainers = [];
+      for (let i = 0; i < 4; i++) {
+        const container = document.getElementById(`roomMapChips_${i}`);
+        if (container) {
+          roomChipContainers.push({
+            el: container,
+            html: ''
           });
         }
+      }
+      
+      let listHTML = '';
+      let winHTML = '';
+      let hasWin = false;
+      const now = Date.now();
+      
+      students.forEach(st => {
+        const roomIdx = Math.min(3, st.currentRoom !== undefined ? st.currentRoom : 0);
+        const isFinished = st.progressRate >= 100;
         
-        mapHTML += `
+        // 정체 여부 계산 (3분 = 180,000ms)
+        const lastActive = st.lastUpdated || now;
+        const idleTimeMs = now - lastActive;
+        const isStagnant = !isFinished && idleTimeMs >= 180000;
+        
+        // 1) 리스트 뷰 HTML 작성
+        const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const minutesAgo = Math.floor(idleTimeMs / 60000);
+        const idleWarning = isStagnant ? `<span class="text-xs text-red-400 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
+        
+        let cardClass = "bg-stone-900/60 border border-yellow-900/10 p-3 rounded-lg";
+        if (isFinished) {
+          cardClass = "bg-emerald-950/20 border border-emerald-500/20 p-3 rounded-lg";
+        } else if (isStagnant) {
+          cardClass = "bg-red-950/20 border border-red-500/40 p-3 rounded-lg stagnant-pulse";
+        }
+        
+        listHTML += `
+          <div class="${cardClass}">
+            <div class="flex justify-between items-start mb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-stone-500 font-mono text-xs">${st.number}번</span>
+                <span class="font-bold text-stone-200">${st.name}</span>
+              </div>
+              <span class="text-xs ${isFinished ? 'text-emerald-400' : 'text-amber-500'} font-semibold">${st.progressRate}%</span>
             </div>
+            
+            <div class="w-full bg-stone-950 rounded-full h-1 mb-2 overflow-hidden">
+              <div class="h-1 rounded-full ${isFinished ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${st.progressRate}%"></div>
+            </div>
+            
+            <div class="flex justify-between items-center text-[11px] text-stone-400">
+              <span class="truncate max-w-[130px]">${isFinished ? '최종 완주!' : (st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
+              <span class="text-[9px] text-stone-500">${timeStr} ${idleWarning}</span>
+            </div>
+            <div class="text-[10px] text-amber-700 mt-0.5 truncate">${st.currentStep || ''}</div>
           </div>
         `;
+        
+        // 2) 조감도 칩 배치 또는 완주 리스트 분류
+        if (isFinished) {
+          // 완주 구역 추가
+          hasWin = true;
+          winHTML += `
+            <div class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-emerald-900/20 border border-emerald-500/40 text-emerald-300 font-bold shadow-md">
+              <span class="font-mono text-[10px] bg-stone-950/40 px-1 rounded">${st.number}번</span>
+              <span>${st.name}</span>
+              <span class="text-[10px] opacity-75 font-normal">(${timeStr})</span>
+            </div>
+          `;
+          
+          // 조감도에 배치되었던 기존 칩 제거 (완주 시 조감도 맵에서 사라짐)
+          const oldChip = document.getElementById(`student_chip_${st.number}`);
+          if (oldChip) {
+            oldChip.remove();
+          }
+        } else {
+          // 현재 방 조감도 좌표 매핑 (x, z 범위: -16 ~ +16)
+          const px = st.x !== undefined ? st.x : 0;
+          const pz = st.z !== undefined ? st.z : 7; // 기본 시작 좌표인 7 부근
+          
+          // 백분율 좌표 변환 ( Three.js의 z 좌표가 2D 맵의 top/y좌표에 대치 )
+          const leftPercent = ((px + 16) / 32) * 100;
+          const topPercent = ((pz + 16) / 32) * 100;
+          
+          // 방 변경 여부 체크 (방이 바뀌었으면 날아가지 않고 즉시이동 처리)
+          const prevRoom = prevRooms[st.number];
+          const isRoomChanged = prevRoom !== undefined && prevRoom !== roomIdx;
+          prevRooms[st.number] = roomIdx;
+          
+          // DOM 직접 조작으로 칩 이동 처리 (부드러운 transition 적용)
+          let chip = document.getElementById(`student_chip_${st.number}`);
+          if (!chip) {
+            chip = document.createElement('div');
+            chip.id = `student_chip_${st.number}`;
+            chip.className = `student-chip absolute select-none pointer-events-auto z-30 transform -translate-x-1/2 -translate-y-1/2 flex items-center shadow-lg`;
+            document.body.appendChild(chip); // 임시 등록 후 아래에서 컨테이너로 이동시킴
+          }
+          
+          // 칩 스타일 클래스
+          let colorClass = "bg-amber-400 border border-stone-950 text-stone-950 font-extrabold";
+          if (isStagnant) {
+            colorClass = "bg-red-600 border border-stone-950 text-white font-extrabold stagnant-pulse";
+          }
+          
+          chip.innerHTML = `
+            <div class="px-1.5 py-0.5 rounded-full text-[10px] ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
+              <span class="font-mono text-[8px] bg-stone-950/20 px-0.5 rounded">${st.number}</span>
+              <span>${st.name}</span>
+            </div>
+          `;
+          
+          // 방이 바뀐 경우 트랜지션을 강제로 잠시 해제하여 뿅 날아가지 않게 함
+          if (isRoomChanged) {
+            chip.classList.add('no-transition');
+          } else {
+            chip.classList.remove('no-transition');
+          }
+          
+          // 칩의 좌표 갱신
+          chip.style.left = `${leftPercent}%`;
+          chip.style.top = `${topPercent}%`;
+          
+          // 강제 리플로우 유발 후 방 이동 시 트랜지션 복원
+          if (isRoomChanged) {
+            void chip.offsetWidth;
+            chip.classList.remove('no-transition');
+          }
+          
+          // 해당 방 컨테이너로 소속 이동
+          const targetContainer = document.getElementById(`roomMapChips_${roomIdx}`);
+          if (targetContainer && chip.parentNode !== targetContainer) {
+            targetContainer.appendChild(chip);
+          }
+        }
       });
       
-      mapRooms.innerHTML = mapHTML;
+      // 화면 갱신
+      studentList.innerHTML = listHTML || `<div class="text-stone-500 text-center py-10 text-sm">참여 중인 학생이 없습니다.</div>`;
+      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-600 text-xs my-auto italic">아직 완주한 학생이 없습니다.</div>`;
+      
+      // 데이터 목록에 존재하지 않는(나간) 학생들의 칩 자동 청소
+      const existingChips = document.querySelectorAll('.student-chip');
+      existingChips.forEach(chip => {
+        const num = parseInt(chip.id.replace('student_chip_', ''), 10);
+        if (!students.some(st => st.number === num && st.progressRate < 100)) {
+          chip.remove();
+          delete prevRooms[num];
+        }
+      });
     }
     
+    // 정체 알림 실시간 동기화 업데이트용 타이머 (10초에 한번 새로고침)
     setInterval(() => {
       if (studentsData && Object.keys(studentsData).length > 0) {
         renderDashboard();

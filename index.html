@@ -719,6 +719,21 @@ function syncFirebase(event) {
   }
 }
 
+/* ---------- Firebase 실시간 위치 동기화 (트래픽 최적화 스로틀링 적용) ---------- */
+function syncFirebasePosition(x, z) {
+  if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) return;
+  try {
+    const classId = player.classId || '1';
+    const number = player.number || 1;
+    const db = firebase.database();
+    db.ref('classes/' + classId + '/student_' + number).update({
+      x: Math.round(x * 100) / 100,
+      z: Math.round(z * 100) / 100,
+      lastUpdated: Date.now()
+    });
+  } catch(e) {}
+}
+
 /* ---------- HUD ---------- */
 function renderHUD(){const L=['천','백','십','일'];
   $('#roomlabel').innerHTML=`<b>${CUR().name}</b> &nbsp;(${progress.room+1}/${ROOMS.length})`;
@@ -1184,6 +1199,7 @@ camera.position.set(hero.position.x,4.4,hero.position.z+6.5);
 
 const clock=new THREE.Clock(); let phase=0; const SPEED=5.5;
 let starTime=0;
+let lastPosSendTime=0, lastPos={x:0,z:0};
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
@@ -1298,6 +1314,17 @@ function animate(){
   // 멀티
   net.acc+=dt; if(net.acc>0.12){net.acc=0;netPublish();}
   netUpdate(dt);
+  
+  if (!S.paused) {
+    const distSq = Math.pow(hero.position.x - lastPos.x, 2) + Math.pow(hero.position.z - lastPos.z, 2);
+    const nowTime = Date.now();
+    if (distSq > 0.02 && nowTime - lastPosSendTime >= 1000) {
+      lastPosSendTime = nowTime;
+      lastPos.x = hero.position.x;
+      lastPos.z = hero.position.z;
+      syncFirebasePosition(hero.position.x, hero.position.z);
+    }
+  }
   
   // 조이스틱 표시 여부 제어 (모달, 승리, 인트로, 세팅 화면이 켜져 있을 때는 숨김)
   const stick = $('#stick');
