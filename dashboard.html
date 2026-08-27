@@ -61,6 +61,11 @@
       <button id="toggleListBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] border border-[#dfd5c6] text-[#5c4033] font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
         <span>📋</span> <span id="toggleText">현황판 접기</span>
       </button>
+      
+      <!-- 학급 초기화 버튼 -->
+      <button id="clearDataBtn" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+        <span>🧹</span> <span>학급 초기화</span>
+      </button>
     </div>
   </header>
 
@@ -230,6 +235,25 @@
       }
       setTimeout(renderDashboard, 100);
     });
+
+    // 학급 데이터 전체 초기화 버튼 리스너
+    const clearDataBtn = document.getElementById('clearDataBtn');
+    if (clearDataBtn) {
+      clearDataBtn.addEventListener('click', () => {
+        if (confirm(`${currentClass} 학급의 모든 실시간 대시보드 데이터를 초기화하시겠습니까?\n(학생들의 게임 화면은 유지되지만, 대시보드 조감도와 리스트 목록에서는 즉시 싹 사라집니다.)`)) {
+          db.ref('classes/' + currentClass).remove();
+        }
+      });
+    }
+
+    // 개별 학생 삭제 전역 함수
+    window.removeStudent = (num) => {
+      const targetKey = 'student_' + num;
+      const name = studentsData[targetKey] ? studentsData[targetKey].name : '학생';
+      if (confirm(`[${num}번 ${name}] 학생을 대시보드에서 제외하시겠습니까?`)) {
+        db.ref('classes/' + currentClass + '/' + targetKey).remove();
+      }
+    };
 
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -412,7 +436,10 @@
                 <span class="text-stone-500 font-mono text-xs font-bold">${st.number}번</span>
                 <span class="font-extrabold text-stone-850 text-sm">${st.name}</span>
               </div>
-              <span class="text-xs ${isFinished ? 'text-emerald-700 font-extrabold' : 'text-blue-700 font-extrabold'}">${st.progressRate}%</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs ${isFinished ? 'text-emerald-700 font-extrabold' : 'text-blue-700 font-extrabold'}">${st.progressRate}%</span>
+                <button onclick="removeStudent('${st.number}')" class="text-[#bca693] hover:text-red-600 text-xs font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
+              </div>
             </div>
             
             <div class="w-full bg-[#eee7de] rounded-full h-1.5 mb-2 overflow-hidden shadow-inner">
