@@ -1173,9 +1173,15 @@ function netPublish(){ if(net.ready) net.me.set({n:player.name,c:player.shirt,x:
 function netUpdate(dt){
   if(!net.ready)return;
   const seen={};
+  const renderedNames = {};
   for(const pid in net.data){ if(pid===net.pid)continue; const d=net.data[pid]; if(!d)continue;
+    if(d.n===player.name || renderedNames[d.n]){
+      if(net.avatars[pid]){scene.remove(net.avatars[pid]);delete net.avatars[pid];}
+      continue;
+    }
     if(d.r!==progress.room){ if(net.avatars[pid]){scene.remove(net.avatars[pid]);delete net.avatars[pid];} continue; }
     seen[pid]=1;
+    renderedNames[d.n]=1;
     let a=net.avatars[pid];
     if(!a){ a=buildAvatar(d.c||0x888888,d.n||'?'); a.scale.setScalar(0.6); scene.add(a); a.userData.tp=new THREE.Vector3(d.x,0,d.z); net.avatars[pid]=a; }
     a.userData.tp.set(d.x,0,d.z);

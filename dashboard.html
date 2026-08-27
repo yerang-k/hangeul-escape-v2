@@ -345,6 +345,10 @@
         fbRef.off();
       }
       
+      // 학급 변경 시 화면 상의 모든 이전 학생 칩 잔상 삭제
+      document.querySelectorAll('.student-chip').forEach(chip => chip.remove());
+      for (const k in prevRooms) delete prevRooms[k];
+      
       studentsData = {};
       renderDashboard();
       
