@@ -148,16 +148,24 @@
   @keyframes unlock-shake{0%{transform:scale(1)}50%{transform:scale(1.08) translateY(-4px)}100%{transform:scale(1)}}
   .lock-container.wrong{animation:wrong-shake .3s ease-in-out}
   @keyframes wrong-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+  
+  /* 모달/대화 중 조이스틱 완전 은닉 */
+  body.modal-open #stick {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 </style>
 </head>
-<body>
+<body class="modal-open">
 
 <div id="hud">
   <div class="title" id="roomlabel"></div>
   <div id="safe"></div>
   <div id="items"></div>
 </div>
-<div id="stick"><div id="knob"></div></div>
+<div id="stick" style="display:none"><div id="knob"></div></div>
 <button id="act">🔍 문제보기</button>
 <div id="hintbar">조이스틱으로 이동 · 가구에 다가가 문제보기 (PC: WASD / E)</div>
 
@@ -587,7 +595,7 @@ function renderHUD(){const L=['천','백','십','일'];
 /* ==================== 3D 시작 ==================== */
 $('#startBtn').onclick=()=>{ personalize(); $('#intro').style.display='none'; if(typeof THREE!=='undefined') start3D(); };
 
-function start3D(){
+function start3D(isResume){
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,300);
 const renderer=new THREE.WebGLRenderer({antialias:!IS_TOUCH, powerPreference:'high-performance'});
@@ -919,7 +927,10 @@ function buildRoom(i, isResume){
   if(!isResume){
     S.done={}; S.digits=R.code.split('').map(()=>'?'); S.items=[]; S.paused=false;
     S.wrongCounts={};
+  } else {
+    S.paused=false;
   }
+  document.body.classList.remove('modal-open');
   hero.position.set(0,0,7); hero.rotation.y=Math.PI;
   renderHUD();
   saveGame();
@@ -979,6 +990,7 @@ window.__advance=()=>{
   const nx=progress.room+1; const R=ROOMS[nx];
   $('#fadeName').textContent=R.name; $('#fadeConcept').textContent=R.concept;
   $('#fade').classList.add('on'); S.paused=true;
+  document.body.classList.add('modal-open');
   setTimeout(()=>{ progress.room=nx; buildRoom(nx);
     setTimeout(()=>$('#fade').classList.remove('on'),700); },900);
 };
@@ -1125,6 +1137,17 @@ function animate(){
   // 멀티
   net.acc+=dt; if(net.acc>0.12){net.acc=0;netPublish();}
   netUpdate(dt);
+  
+  // 조이스틱 표시 여부 제어 (모달이 켜져 일시정지 상태일 때는 숨김)
+  const stick = $('#stick');
+  if (stick) {
+    const targetDisplay = S.paused ? 'none' : 'block';
+    if (stick.style.display !== targetDisplay) {
+      stick.style.display = targetDisplay;
+    }
+  }
+  document.body.classList.toggle('modal-open', S.paused);
+
   renderer.render(scene,camera);
 }
 animate();
@@ -1135,10 +1158,11 @@ window.__hero=hero;
 
 /* ==================== 퍼즐/금고/승리 (DOM) ==================== */
 const norm=s=>(s||'').replace(/\s/g,'').replace(/[.,!?·()]/g,'').toLowerCase();
-function closeOverlay(){clearInterval(window.__tt);$('#overlay').style.display='none';S.paused=false;}
+function closeOverlay(){clearInterval(window.__tt);$('#overlay').style.display='none';S.paused=false;document.body.classList.remove('modal-open');}
 window.closeOverlay=closeOverlay;
 function openRoomIntro(room){
   S.paused=true;
+  document.body.classList.add('modal-open');
   $('#modal').innerHTML=`<div class="k">${room.name} 안내</div>
     <div class="q" style="text-align:center;line-height:1.65;font-size:1.05rem;">
       <b style="color:var(--gold);font-size:1.2rem;">" ${room.concept} "</b>\n\n${room.introText}
@@ -1148,12 +1172,15 @@ function openRoomIntro(room){
 }
 function openStation(st){
   S.paused=true;
+  document.body.classList.add('modal-open');
   if(st.lock&&!S.items.includes(st.lock)){flashModal(st.name,`🔒 굳게 잠겨 있다.<br><b>${st.lock}</b>가 있어야 열 수 있다.`);return;}
   if(st.type==='safe'){openSafe();return;}
   if(st.type==='info'){openInfo(st);return;}
   openPuzzle(st);
 }
-function flashModal(k,html){$('#modal').innerHTML=`<div class="k">${k}</div><div class="q">${html}</div>
+function flashModal(k,html){
+  document.body.classList.add('modal-open');
+  $('#modal').innerHTML=`<div class="k">${k}</div><div class="q">${html}</div>
   <div class="row-btns"><span></span><button class="btn ghost" onclick="closeOverlay()">닫기</button></div>`;$('#overlay').style.display='flex';}
 /* ---- NPC 대화형 퀴즈 ---- */
 let chatStation=null, chatBubbles=[], chatOrder=null, chatSolved=false;
@@ -1209,7 +1236,7 @@ function drawChat(){
   if(typing){ typeBubble($('#bubs').children[toType], chatBubbles[toType].t, ()=>{chatBubbles[toType].done=true;drawChat();}); }
   else { const inp=$('#ans'); if(inp){inp.focus();inp.addEventListener('keydown',e=>{if(e.key==='Enter')tryText(st.id);});} }
 }
-function startChat(st){ S.paused=true; chatStation=st; chatSolved=false; chatBubbles=[{c:'npc',t:st.q}];
+function startChat(st){ S.paused=true; document.body.classList.add('modal-open'); chatStation=st; chatSolved=false; chatBubbles=[{c:'npc',t:st.q}];
   if(st.type==='choice'){ chatOrder=st.opts.map((_,k)=>k);
     for(let a=chatOrder.length-1;a>0;a--){const b=Math.floor(Math.random()*(a+1));[chatOrder[a],chatOrder[b]]=[chatOrder[b],chatOrder[a]];} }
   drawChat(); $('#overlay').style.display='flex'; }
@@ -1244,8 +1271,9 @@ window.tryText=id=>{const st=stById(id); if(chatSolved)return; const v=($('#ans'
   if(!v.trim())return; chatBubbles.push({c:'me',t:v});
   if(st.accept.map(norm).includes(norm(v))) winReply(st);
   else { chatBubbles.push({c:'no',t:'그 답이 아니네. 한 번 더.'}); drawChat(); } };
-function markDone(id){S.done[id]=true;const st=stById(id);if(st){if(st.marker)st.marker.visible=false;if(st.star)st.star.visible=false;}}
+function markDone(id){S.done[id]=true;const st=stById(id);if(st){if(st.marker)st.marker.visible=false;if(st.star)st.star.visible=false;} saveGame();}
 function openSafe(){let entry='';
+  document.body.classList.add('modal-open');
   const render=()=>{$('#modal').innerHTML=`<div class="k">${CUR().name} · 금고</div><div class="q">네 자리 번호를 입력하라.</div>
     <div class="kdisp">${entry.padEnd(4,'·')}</div>
     <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="safeKey('${n}')">${n}</button>`).join('')}
@@ -1276,6 +1304,7 @@ function submitSheet(code, duration){
 }
 function win(){
   const elapsedMs = Date.now() - (S.startTime || Date.now());
+  document.body.classList.add('modal-open');
   const elapsedMin = Math.floor(elapsedMs / 60000);
   const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
   const durationStr = `${elapsedMin}분 ${elapsedSec}초`;
