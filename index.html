@@ -256,11 +256,19 @@
 <script>
 /* ===================== 선생님 설정 ===================== */
 const CONFIG = {
-  // ▼ 완주 기록을 선생님 스프레드시트에 자동 저장. 아래 GAS 웹앱 URL을 붙여넣으면 켜짐(비우면 사용 안 함).
+  // 1. 스프레드시트 직접 연동 (GAS 웹앱 사용 시)
   SHEET_URL: "https://script.google.com/macros/s/AKfycbxznDbsvKDouhbr9VdRyxM2EKpR5mbta0YjSXUa8j-rXFoNnyICDszqsCRz4SYbrF0r/exec",
-  FORM_URL: "",     // 구글폼 사전채우기 링크(.../viewform). 비우면 완주코드만 표시.
-  ENTRY_CODE: "",   // 완주코드 칸 entry 번호 (예: "entry.1234567")
-  // ▼ 멀티플레이(서로의 캐릭터가 보임). 비우면 자동 1인용. Firebase 프로젝트 설정값 붙여넣기.
+  
+  // 2. 구글폼 연동 (스프레드시트 부하 방지용 권장)
+  FORM_URL: "",        // 예: "https://docs.google.com/forms/d/e/.../viewform"
+  FORM_ENTRIES: {
+    id: "",            // 학번 입력란 entry 번호 (예: "entry.123456")
+    name: "",          // 이름 입력란 entry 번호 (예: "entry.789012")
+    code: "",          // 완주코드 입력란 entry 번호 (예: "entry.345678")
+    duration: ""       // 소요시간 입력란 entry 번호 (예: "entry.901234")
+  },
+
+  // 3. 멀티플레이 설정
   FIREBASE: { apiKey:"", authDomain:"", databaseURL:"", projectId:"" }
 };
 /* 방·문제·정답은 ROOMS 배열에서 바로 수정. x,z = 바닥 좌표(-15~15), slot = 금고 자리(0~3) */
@@ -523,8 +531,9 @@ $('#hintbar').textContent = IS_TOUCH
   : '이동 WASD/조이스틱 · 가구에 다가가 클릭 또는 E로 두드리기';
 const player={name:'탐험가',shirt:SHIRTS[0],session:''};
 const progress={room:0};
-const S={done:{},digits:['?','?','?','?'],items:[],near:null,paused:true};
+const S={done:{},digits:['?','?','?','?'],items:[],near:null,paused:true,playTime:0};
 window.S=S;
+const STAR_HEIGHTS = { desk: 3.0, drawer: 4.8, jar: 4.0, chest: 2.8, scroll: 4.5, door: 6.8, npc: 3.8, lamp: 3.8 };
 const CUR=()=>ROOMS[progress.room];
 const stById=id=>CUR().stations.find(s=>s.id===id);
 
@@ -537,7 +546,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     sw.appendChild(d);});
   $('#toIntro').onclick=()=>{
     player.name=($('#nameIn').value.trim()||'탐험가').slice(0,8);
-    S.startTime = Date.now();
+    S.playTime = 0;
     S.wrongCounts = {};
     localStorage.removeItem('hangeul_escape_save');
     $('#setup').style.display='none'; $('#intro').style.display='flex';
@@ -557,7 +566,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
           S.done = saved.done || {};
           S.digits = saved.digits || ['?','?','?','?'];
           S.items = saved.items || [];
-          S.startTime = saved.startTime || Date.now();
+          S.playTime = saved.playTime || 0;
           S.wrongCounts = saved.wrongCounts || {};
           
           personalize();
@@ -578,7 +587,7 @@ function saveGame(){
     done: S.done,
     digits: S.digits,
     items: S.items,
-    startTime: S.startTime || Date.now(),
+    playTime: S.playTime || 0,
     playerName: player.name,
     playerShirt: player.shirt,
     wrongCounts: S.wrongCounts || {}
@@ -610,7 +619,7 @@ sun.shadow.mapSize.set(IS_TOUCH?512:1024, IS_TOUCH?512:1024);
 Object.assign(sun.shadow.camera,{left:-26,right:26,top:26,bottom:-26,near:1,far:70});
 scene.add(sun);
 
-const ROOM=16, WH=9;
+const ROOM=16, WH=9, lim=ROOM-0.8;
 /* ---- 캔버스 무늬(텍스처): 외부 이미지 없이 한글날 무늬를 그려 입힘 ---- */
 function hx(c){return '#'+(c>>>0).toString(16).padStart(6,'0');}
 function makeTex(draw,size){size=size||256;const cv=document.createElement('canvas');cv.width=cv.height=size;
@@ -656,6 +665,20 @@ function textSprite(text,color){
   sp.scale.set(4,1.5,1);sp.renderOrder=999;return sp;
 }
 function marker(){const s=textSprite('?','#e0b357');s.scale.set(1.8,1.8,1);return s;}
+function buildStar(){
+  const geom = new THREE.OctahedronGeometry(0.36, 0);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xe0b357,
+    emissive: 0xe0b357,
+    emissiveIntensity: 0.8,
+    roughness: 0.2,
+    metalness: 0.5
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.name = 'star';
+  mesh.castShadow = true;
+  return mesh;
+}
 
 /* 캐릭터 조립 */
 function buildAvatar(shirt,name,skin){
@@ -926,7 +949,7 @@ function buildRoom(i, isResume){
     dustField=new THREE.Points(geo,pm); roomGroup.add(dustField); }
   if(!isResume){
     S.done={}; S.digits=R.code.split('').map(()=>'?'); S.items=[]; S.paused=false;
-    S.wrongCounts={};
+    S.wrongCounts={}; S.playTime=0;
   } else {
     S.paused=false;
   }
@@ -979,6 +1002,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   if(S.paused||acting)return;
   ndc.x=(e.clientX/innerWidth)*2-1; ndc.y=-(e.clientY/innerHeight)*2+1;
   ray.setFromCamera(ndc,camera);
+  ray.camera = camera;
   const hits=ray.intersectObjects(roomGroup.children,true);
   for(const h of hits){ let o=h.object; while(o && o.userData.stationId===undefined)o=o.parent;
     if(o && o.userData.stationId!==undefined){ tryInteract(stById(o.userData.stationId)); break; } }
@@ -1037,6 +1061,7 @@ function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
   starTime+=dt;
+  if(!S.paused){ S.playTime = (S.playTime||0) + (dt*1000); }
   if(typeof CUR==='function'&&CUR()){
     CUR().stations.forEach(st=>{
       if(st.star&&st.star.visible){
@@ -1101,21 +1126,31 @@ function animate(){
     camDir.normalize();
     
     const camRay = new THREE.Raycaster(characterCenter, camDir, 0.1, maxDist);
+    camRay.camera = camera;
     const intersects = camRay.intersectObjects(roomGroup.children, true);
     
     let finalCamPos = camTmp.clone();
     if(intersects.length > 0){
-      const hit = intersects[0];
-      let currentObj = hit.object;
-      let isInvalid = false;
-      while(currentObj){
-        if(currentObj.userData && (currentObj.userData.stationId === 'npc' || currentObj.name === 'sign' || currentObj.isSprite)){
-          isInvalid = true;
+      let hit = null;
+      for (const checkHit of intersects) {
+        let obj = checkHit.object;
+        if (!obj.isMesh) continue; // Points(빛가루) 등 메쉬가 아니면 무시
+        
+        let isInvalid = false;
+        let temp = obj;
+        while (temp) {
+          if (temp.name === 'star' || temp.name === 'sign' || temp.isSprite || (temp.userData && temp.userData.stationId === 'npc')) {
+            isInvalid = true;
+            break;
+          }
+          temp = temp.parent;
+        }
+        if (!isInvalid) {
+          hit = checkHit;
           break;
         }
-        currentObj = currentObj.parent;
       }
-      if(!isInvalid && hit.distance < maxDist){
+      if(hit && hit.distance < maxDist){
         const safeDist = Math.max(1.0, hit.distance - 0.4);
         finalCamPos.copy(characterCenter).addScaledVector(camDir, safeDist);
       }
@@ -1138,15 +1173,21 @@ function animate(){
   net.acc+=dt; if(net.acc>0.12){net.acc=0;netPublish();}
   netUpdate(dt);
   
-  // 조이스틱 표시 여부 제어 (모달이 켜져 일시정지 상태일 때는 숨김)
+  // 조이스틱 표시 여부 제어 (모달, 승리, 인트로, 세팅 화면이 켜져 있을 때는 숨김)
   const stick = $('#stick');
   if (stick) {
-    const targetDisplay = S.paused ? 'none' : 'block';
+    const isOverlayVisible = $('#overlay') && $('#overlay').style.display === 'flex';
+    const isWinVisible = $('#win') && $('#win').style.display === 'flex';
+    const isSetupVisible = $('#setup') && $('#setup').style.display !== 'none';
+    const isIntroVisible = $('#intro') && $('#intro').style.display !== 'none';
+    
+    const shouldHide = isOverlayVisible || isWinVisible || isSetupVisible || isIntroVisible;
+    const targetDisplay = shouldHide ? 'none' : 'block';
     if (stick.style.display !== targetDisplay) {
       stick.style.display = targetDisplay;
     }
+    document.body.classList.toggle('modal-open', shouldHide);
   }
-  document.body.classList.toggle('modal-open', S.paused);
 
   renderer.render(scene,camera);
 }
@@ -1302,29 +1343,49 @@ function submitSheet(code, duration){
    .then(()=>{ msg.style.color='var(--ok)'; msg.innerHTML='✅ 저장되었습니다. 이 화면을 선생님께 보여주세요.'; btn.textContent='제출 완료'; })
    .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
 }
+function submitGoogleForm(code, duration){
+  const sid=($('#sid').value||'').trim(), nm=($('#snm').value||'').trim();
+  const msg=$('#sheetMsg');
+  if(!sid||!nm){ msg.style.color='var(--no)'; msg.textContent='학번과 이름을 모두 입력하세요.'; return; }
+  const btn=$('#sheetBtn'); btn.disabled=true; btn.textContent='제출 중…'; msg.style.color='var(--ink-dim)'; msg.textContent='';
+  const formUrl = CONFIG.FORM_URL.replace(/\/viewform$/, '/formResponse').replace(/\/viewform\?.*/, '/formResponse');
+  const fd = new FormData();
+  fd.append(CONFIG.FORM_ENTRIES.id, sid);
+  fd.append(CONFIG.FORM_ENTRIES.name, nm);
+  fd.append(CONFIG.FORM_ENTRIES.code, code);
+  fd.append(CONFIG.FORM_ENTRIES.duration, duration);
+  fetch(formUrl, {method:'POST',mode:'no-cors',body:fd})
+   .then(()=>{ msg.style.color='var(--ok)'; msg.innerHTML='✅ 저장되었습니다. 이 화면을 선생님께 보여주세요.'; btn.textContent='제출 완료'; })
+   .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
+}
 function win(){
-  const elapsedMs = Date.now() - (S.startTime || Date.now());
+  const elapsedMs = S.playTime || 0;
   document.body.classList.add('modal-open');
   const elapsedMin = Math.floor(elapsedMs / 60000);
   const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
   const durationStr = `${elapsedMin}분 ${elapsedSec}초`;
-  
   localStorage.removeItem('hangeul_escape_save');
-
   const code=makeCode();
   $('#wintext').innerHTML=`네 개의 방을 모두 빠져나왔다!<br>1443 창제 · 1446 반포 · 1997 세계유산 등재 · 10월 9일 한글날.<br><b>${player.name}</b>, 너는 훈민정음의 길을 완주했다.<br>(소요 시간: <b>${durationStr}</b>)`;
   $('#wincode').textContent=code;$('#wintime').textContent=new Date().toLocaleString('ko-KR')+' 완주';
   const inpS="flex:1;min-width:0;font:inherit;font-size:1rem;color:var(--ink);background:#1d150c;border:1px solid #4a381f;border-radius:10px;padding:10px 12px";
-  if(CONFIG.SHEET_URL){
+  if(CONFIG.FORM_URL && CONFIG.FORM_ENTRIES.id){
+    $('#winsubmit').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="sid" placeholder="학번" style="${inpS}" autocomplete="off" inputmode="numeric">
+        <input id="snm" placeholder="이름" value="${esc(player.name||'')}" style="${inpS}" autocomplete="off"></div>
+      <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
+      <div class="fine" id="sheetMsg"></div>`;
+    $('#sheetBtn').onclick=()=>submitGoogleForm(code, durationStr);
+  } else if(CONFIG.SHEET_URL){
     $('#winsubmit').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:8px">
         <input id="sid" placeholder="학번" style="${inpS}" autocomplete="off" inputmode="numeric">
         <input id="snm" placeholder="이름" value="${esc(player.name||'')}" style="${inpS}" autocomplete="off"></div>
       <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
       <div class="fine" id="sheetMsg"></div>`;
     $('#sheetBtn').onclick=()=>submitSheet(code, durationStr);
-  } else if(CONFIG.FORM_URL&&CONFIG.ENTRY_CODE){const url=`${CONFIG.FORM_URL}?usp=pp_url&${CONFIG.ENTRY_CODE}=${encodeURIComponent(code)}`;
-    $('#winsubmit').innerHTML=`<a class="btn" href="${url}" target="_blank" rel="noopener">🎁 선물 신청하기 (제출)</a>`;}
-  else $('#winsubmit').innerHTML=`<div class="fine">완주 코드를 선생님께 보여주고 선물을 받으세요.</div>`;
+  } else {
+    $('#winsubmit').innerHTML=`<div class="fine">완주 코드를 선생님께 보여주고 선물을 받으세요.</div>`;
+  }
   $('#win').style.display='flex';
   $('#copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(code);$('#copy').textContent='복사됨!';setTimeout(()=>$('#copy').textContent='코드 복사',1500);};}
 
