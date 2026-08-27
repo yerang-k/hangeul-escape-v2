@@ -260,12 +260,12 @@ const CONFIG = {
   SHEET_URL: "https://script.google.com/macros/s/AKfycbxznDbsvKDouhbr9VdRyxM2EKpR5mbta0YjSXUa8j-rXFoNnyICDszqsCRz4SYbrF0r/exec",
   
   // 2. 구글폼 연동 (스프레드시트 부하 방지용 권장)
-  FORM_URL: "",        // 예: "https://docs.google.com/forms/d/e/.../viewform"
+  FORM_URL: "https://docs.google.com/forms/d/e/1FAIpQLSe3NyI948jN3xvvGjbGBq4hYqaHqIqJICr2d1HQfXJgVkJnQQ/viewform",
   FORM_ENTRIES: {
-    id: "",            // 학번 입력란 entry 번호 (예: "entry.123456")
-    name: "",          // 이름 입력란 entry 번호 (예: "entry.789012")
-    code: "",          // 완주코드 입력란 entry 번호 (예: "entry.345678")
-    duration: ""       // 소요시간 입력란 entry 번호 (예: "entry.901234")
+    id: "entry.1272965112",
+    name: "entry.399696500",
+    code: "entry.1201075032",
+    duration: "entry.93173145"
   },
 
   // 3. 멀티플레이 설정
@@ -531,7 +531,7 @@ $('#hintbar').textContent = IS_TOUCH
   : '이동 WASD/조이스틱 · 가구에 다가가 클릭 또는 E로 두드리기';
 const player={name:'탐험가',shirt:SHIRTS[0],session:''};
 const progress={room:0};
-const S={done:{},digits:['?','?','?','?'],items:[],near:null,paused:true,playTime:0};
+const S={done:{},digits:['?','?','?','?'],items:[],near:null,paused:true,startTime:0};
 window.S=S;
 const STAR_HEIGHTS = { desk: 3.0, drawer: 4.8, jar: 4.0, chest: 2.8, scroll: 4.5, door: 6.8, npc: 3.8, lamp: 3.8 };
 const CUR=()=>ROOMS[progress.room];
@@ -546,7 +546,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     sw.appendChild(d);});
   $('#toIntro').onclick=()=>{
     player.name=($('#nameIn').value.trim()||'탐험가').slice(0,8);
-    S.playTime = 0;
+    S.startTime = Date.now();
     S.wrongCounts = {};
     localStorage.removeItem('hangeul_escape_save');
     $('#setup').style.display='none'; $('#intro').style.display='flex';
@@ -566,7 +566,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
           S.done = saved.done || {};
           S.digits = saved.digits || ['?','?','?','?'];
           S.items = saved.items || [];
-          S.playTime = saved.playTime || 0;
+          S.startTime = saved.startTime || Date.now();
           S.wrongCounts = saved.wrongCounts || {};
           
           personalize();
@@ -587,7 +587,7 @@ function saveGame(){
     done: S.done,
     digits: S.digits,
     items: S.items,
-    playTime: S.playTime || 0,
+    startTime: S.startTime || Date.now(),
     playerName: player.name,
     playerShirt: player.shirt,
     wrongCounts: S.wrongCounts || {}
@@ -665,7 +665,7 @@ function textSprite(text,color){
   sp.scale.set(4,1.5,1);sp.renderOrder=999;return sp;
 }
 function marker(){const s=textSprite('?','#e0b357');s.scale.set(1.8,1.8,1);return s;}
-function buildStar(){
+window.buildStar = function buildStar(){
   const geom = new THREE.OctahedronGeometry(0.36, 0);
   const mat = new THREE.MeshStandardMaterial({
     color: 0xe0b357,
@@ -927,7 +927,7 @@ function buildRoom(i, isResume){
         icon.position.set(0,h,0);
         g.add(icon);
         st.lockIcon=icon;
-      }else if(st.type!=='safe'){
+      }else if(st.type!=='safe' || (st.type==='safe' && S.items.includes(st.lock))){
         const star=buildStar();
         star.position.set(0,h,0);
         g.add(star);
@@ -949,7 +949,7 @@ function buildRoom(i, isResume){
     dustField=new THREE.Points(geo,pm); roomGroup.add(dustField); }
   if(!isResume){
     S.done={}; S.digits=R.code.split('').map(()=>'?'); S.items=[]; S.paused=false;
-    S.wrongCounts={}; S.playTime=0;
+    S.wrongCounts={}; S.startTime=Date.now();
   } else {
     S.paused=false;
   }
@@ -1061,7 +1061,6 @@ function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
   starTime+=dt;
-  if(!S.paused){ S.playTime = (S.playTime||0) + (dt*1000); }
   if(typeof CUR==='function'&&CUR()){
     CUR().stations.forEach(st=>{
       if(st.star&&st.star.visible){
@@ -1237,7 +1236,7 @@ function updateLockStatus(){
         if(st.lockIcon){
           st.group.remove(st.lockIcon);
           st.lockIcon=null;
-          if(st.type==='choice'||st.type==='text'){
+          if(st.type==='choice'||st.type==='text'||st.type==='safe'){
             const star=buildStar();
             const h=STAR_HEIGHTS[st.build]||3.0;
             star.position.set(0,h,0);
@@ -1268,7 +1267,7 @@ function drawChat(){
   let foot='';
   if(chatSolved) foot=`<div class="row-btns"><span></span><button class="btn" onclick="closeOverlay()">물러난다</button></div>`;
   else if(st.type==='info') foot=`<div class="row-btns"><span></span><button class="btn" onclick="finishInfo('${st.id}')">알겠다</button></div>`;
-  else if(st.type==='choice') foot=`<div class="replies">${chatOrder.map((oi,pos)=>`<button class="reply" onclick="tryChoice('${st.id}',${oi})">${'①②③④'[pos]} ${esc(st.opts[oi])}</button>`).join('')}</div>`+hintRow();
+  else if(st.type==='choice' || (st.opts && st.opts.length > 0)) foot=`<div class="replies">${chatOrder.map((oi,pos)=>`<button class="reply" onclick="tryChoice('${st.id}',${oi})">${'①②③④'[pos]} ${esc(st.opts[oi])}</button>`).join('')}</div>`+hintRow();
   else foot=`<div class="textrow"><input type="text" id="ans" placeholder="답을 적어 보내기" autocomplete="off"><button class="btn" onclick="tryText('${st.id}')">보내기</button></div>`+hintRow();
   $('#modal').innerHTML=`<div class="vn">${cast}<div class="tag2">${st.k}</div>
     <div class="bubbles" id="bubs">${bubbleHTML}</div>
@@ -1278,7 +1277,7 @@ function drawChat(){
   else { const inp=$('#ans'); if(inp){inp.focus();inp.addEventListener('keydown',e=>{if(e.key==='Enter')tryText(st.id);});} }
 }
 function startChat(st){ S.paused=true; document.body.classList.add('modal-open'); chatStation=st; chatSolved=false; chatBubbles=[{c:'npc',t:st.q}];
-  if(st.type==='choice'){ chatOrder=st.opts.map((_,k)=>k);
+  if(st.type==='choice' || (st.opts && st.opts.length > 0)){ chatOrder=st.opts.map((_,k)=>k);
     for(let a=chatOrder.length-1;a>0;a--){const b=Math.floor(Math.random()*(a+1));[chatOrder[a],chatOrder[b]]=[chatOrder[b],chatOrder[a]];} }
   drawChat(); $('#overlay').style.display='flex'; }
 function openInfo(st){ startChat(st); }
@@ -1286,32 +1285,53 @@ function openPuzzle(st){ startChat(st); }
 window.finishInfo=id=>{const st=stById(id); if(!st||st.build!=='npc')markDone(id); closeOverlay();}; // NPC는 done 처리 안 함 → 여러 번 대화
 window.npcHint=()=>{ chatBubbles.push({c:'npc',t:'💡 '+(chatStation.hint||'…')}); drawChat(); };
 function winReply(st){ chatSolved=true; chatBubbles.push({c:'npc',t:'철컥 — 훌륭하다! '+rewardText(st)}); applyReward(st); drawChat(); markDone(st.id); }
-window.tryChoice=(id,k)=>{const st=stById(id); if(chatSolved)return;
-  chatBubbles.push({c:'me',t:st.opts[k]});
-  if(k===st.answer) winReply(st);
-  else {
-    if(!S.wrongCounts) S.wrongCounts={};
-    S.wrongCounts[st.id] = (S.wrongCounts[st.id]||0) + 1;
-    saveGame();
-    if(S.wrongCounts[st.id] >= 3){
-      chatSolved = true;
-      chatBubbles.push({c:'no',t:'철컥 — 틀렸네. 세 번의 기회를 모두 잃어 탈출에 실패했다!'});
-      drawChat();
-      setTimeout(()=>{ triggerGameOver(); }, 2000);
-    } else {
-      chatBubbles.push({c:'no',t:`아니야, 다시 헤아려 보게. (남은 오답 기회: ${3 - S.wrongCounts[st.id]}회)`});
-      drawChat();
+window.tryChoice=(id,k)=>{
+  try {
+    const st=stById(id);
+    if(!st){ console.error("st is null for id:", id); return; }
+    if(chatSolved)return;
+    if(!st.opts || st.opts[k] === undefined){ console.error("st.opts is invalid for st:", st, "index:", k); return; }
+    chatBubbles.push({c:'me',t:st.opts[k]});
+    if(k===st.answer) winReply(st);
+    else {
+      if(!S.wrongCounts) S.wrongCounts={};
+      S.wrongCounts[st.id] = (S.wrongCounts[st.id]||0) + 1;
+      saveGame();
+      if(S.wrongCounts[st.id] >= 3){
+        chatSolved = true;
+        chatBubbles.push({c:'no',t:'철컥 — 틀렸네. 세 번의 기회를 모두 잃어 탈출에 실패했다!'});
+        drawChat();
+        setTimeout(()=>{ triggerGameOver(); }, 2000);
+      } else {
+        chatBubbles.push({c:'no',t:`아니야, 다시 헤아려 보게. (남은 오답 기회: ${3 - S.wrongCounts[st.id]}회)`});
+        drawChat();
+      }
     }
-  } };
+  } catch(err) {
+    console.error("Error in tryChoice:", err);
+    alert("오류 발생: " + err.message);
+  }
+};
 function triggerGameOver(){
   localStorage.removeItem('hangeul_escape_save');
   alert("오답 누적으로 탈출에 실패했습니다! 처음부터 다시 시작합니다.");
   location.reload();
 }
-window.tryText=id=>{const st=stById(id); if(chatSolved)return; const v=($('#ans')?$('#ans').value:'');
-  if(!v.trim())return; chatBubbles.push({c:'me',t:v});
-  if(st.accept.map(norm).includes(norm(v))) winReply(st);
-  else { chatBubbles.push({c:'no',t:'그 답이 아니네. 한 번 더.'}); drawChat(); } };
+window.tryText=id=>{
+  try {
+    const st=stById(id);
+    if(!st) return;
+    if(chatSolved)return;
+    const v=($('#ans')?$('#ans').value:'');
+    if(!v.trim())return;
+    chatBubbles.push({c:'me',t:v});
+    if(st.accept.map(norm).includes(norm(v))) winReply(st);
+    else { chatBubbles.push({c:'no',t:'그 답이 아니네. 한 번 더.'}); drawChat(); }
+  } catch(err) {
+    console.error("Error in tryText:", err);
+    alert("오류 발생: " + err.message);
+  }
+};
 function markDone(id){S.done[id]=true;const st=stById(id);if(st){if(st.marker)st.marker.visible=false;if(st.star)st.star.visible=false;} saveGame();}
 function openSafe(){let entry='';
   document.body.classList.add('modal-open');
@@ -1359,7 +1379,7 @@ function submitGoogleForm(code, duration){
    .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
 }
 function win(){
-  const elapsedMs = S.playTime || 0;
+  const elapsedMs = Date.now() - (S.startTime || Date.now());
   document.body.classList.add('modal-open');
   const elapsedMin = Math.floor(elapsedMs / 60000);
   const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
