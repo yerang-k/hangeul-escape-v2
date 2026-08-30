@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
   <title>한글날 방탈출 — 교사용 실시간 조감도 대시보드</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -333,7 +334,7 @@
           mapsHTML += `
             <div class="absolute ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
               <!-- 라벨은 가구 칸 크기에 눌려 잘리지 않도록, 칸 밖으로 넘쳐도 되는 별도 오버레이로 -->
-              <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[12px] md:text-[13px] font-black leading-none whitespace-nowrap text-white px-0.5" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 4px rgba(0,0,0,.6)">${f.name}</span>
+              <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] md:text-[11px] font-black leading-none whitespace-nowrap text-white px-0.5" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 4px rgba(0,0,0,.6)">${f.name}</span>
             </div>
           `;
         });
@@ -491,17 +492,14 @@
             document.body.appendChild(chip);
           }
 
-          // 캐릭터(작은 점) 색: 평소 노랑, 정체 시 빨강. 한 방에 20명+ 몰려도 겹치지 않게 작게.
-          let dotClass = "bg-[#ffd54f] border-2 border-[#5c4033] text-[#2b1f15]";
+          // 이름표만 돌아다님(번호 없음): 평소 노랑, 정체 시 빨강. 한 방에 20명+ 몰려도 자리를 적게 차지하도록 작게.
+          let labelClass = "bg-[#ffd54f] border border-[#5c4033] text-[#2b1f15]";
           if (isStagnant) {
-            dotClass = "bg-[#d32f2f] border-2 border-[#ffd54f] text-white stagnant-pulse";
+            labelClass = "bg-[#d32f2f] border border-[#ffd54f] text-white stagnant-pulse";
           }
 
           chip.innerHTML = `
-            <div class="relative flex items-center justify-center cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
-              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-0.5 text-[10px] font-black leading-none whitespace-nowrap px-1 py-0.5 rounded bg-black/75 text-white shadow pointer-events-none">${st.name}</span>
-              <div class="w-4 h-4 rounded-full ${dotClass} shadow-md flex items-center justify-center text-[7px] font-black leading-none">${st.number}</div>
-            </div>
+            <div class="px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none whitespace-nowrap shadow-md cursor-help ${labelClass}" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">${st.name}</div>
           `;
           
           if (isRoomChanged) {
