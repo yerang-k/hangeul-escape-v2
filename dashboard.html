@@ -47,7 +47,7 @@
     <div class="flex items-center gap-3">
       <span class="text-4xl">👨‍🏫</span>
       <div>
-        <h1 class="text-3xl font-extrabold text-[#8c6239] myeongjo">한글날 방탈출</h1>
+        <h1 class="text-4xl font-extrabold text-[#3d2b1a] myeongjo tracking-tight">한글날 방탈출</h1>
         <p class="text-sm text-[#a67c52] font-bold">실시간 학급별 조감도 모니터링 대시보드</p>
       </div>
     </div>
@@ -319,20 +319,21 @@
           const width = (f.w / 32) * 100;
           const height = (f.d / 32) * 100;
           
-          let styleClass = "bg-[#8c6239] border border-[#6b4725] text-white rounded font-bold shadow-sm";
+          let styleClass = "bg-[#8c6239] border border-[#6b4725] rounded shadow-sm";
           if (f.build === 'jar') {
-            styleClass = "bg-[#a67c52] border border-[#7f5c38] rounded-full text-white font-bold shadow-sm";
+            styleClass = "bg-[#a67c52] border border-[#7f5c38] rounded-full shadow-sm";
           } else if (f.build === 'scroll') {
-            styleClass = "bg-[#bca693] border border-[#9a826e] text-[#4a301a] font-bold shadow-sm";
+            styleClass = "bg-[#bca693] border border-[#9a826e] shadow-sm";
           } else if (f.build === 'npc') {
-            styleClass = "bg-[#2e7d32] border border-[#1b5e20] text-white rounded-full font-bold shadow-sm";
+            styleClass = "bg-[#2e7d32] border border-[#1b5e20] rounded-full shadow-sm";
           } else if (f.build === 'door') {
-            styleClass = "bg-[#c62828] border border-[#b71c1c] text-white rounded font-bold shadow-sm";
+            styleClass = "bg-[#c62828] border border-[#b71c1c] rounded shadow-sm";
           }
-          
+
           mapsHTML += `
-            <div class="absolute flex flex-col items-center justify-center text-[12px] md:text-[13px] overflow-hidden leading-tight ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
-              <span class="scale-95 transform origin-center text-center truncate max-w-full px-0.5">${f.name}</span>
+            <div class="absolute ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
+              <!-- 라벨은 가구 칸 크기에 눌려 잘리지 않도록, 칸 밖으로 넘쳐도 되는 별도 오버레이로 -->
+              <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[12px] md:text-[13px] font-black leading-none whitespace-nowrap text-white px-0.5" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 4px rgba(0,0,0,.6)">${f.name}</span>
             </div>
           `;
         });
@@ -486,26 +487,20 @@
           if (!chip) {
             chip = document.createElement('div');
             chip.id = `student_chip_${st.number}`;
-            chip.className = `student-chip absolute select-none pointer-events-auto z-30 transform -translate-x-1/2 -translate-y-1/2 flex items-center shadow-lg`;
+            chip.className = `student-chip absolute select-none pointer-events-auto z-30 transform -translate-x-1/2 -translate-y-1/2`;
             document.body.appendChild(chip);
           }
-          
-          let colorClass = "bg-[#ffd54f] border border-[#5c4033] text-[#2b1f15] font-black";
+
+          // 캐릭터(작은 점) 색: 평소 노랑, 정체 시 빨강. 한 방에 20명+ 몰려도 겹치지 않게 작게.
+          let dotClass = "bg-[#ffd54f] border-2 border-[#5c4033] text-[#2b1f15]";
           if (isStagnant) {
-            colorClass = "bg-[#d32f2f] border border-[#ffd54f] text-white font-black stagnant-pulse";
+            dotClass = "bg-[#d32f2f] border-2 border-[#ffd54f] text-white stagnant-pulse";
           }
-          
-          let numberSpan = `<span class="font-mono text-[13px] bg-[#5c4033]/15 text-[#2b1f15] px-1 rounded font-bold">${st.number}</span>`;
-          let textSpan = `<span class="text-sm text-[#2b1f15] font-extrabold">${st.name}</span>`;
-          if (isStagnant) {
-            numberSpan = `<span class="font-mono text-[13px] bg-white/20 text-white px-1 rounded font-bold">${st.number}</span>`;
-            textSpan = `<span class="text-sm text-white font-extrabold">${st.name}</span>`;
-          }
-          
+
           chip.innerHTML = `
-            <div class="px-2.5 py-1 rounded-full text-sm ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
-              ${numberSpan}
-              ${textSpan}
+            <div class="relative flex items-center justify-center cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
+              <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-0.5 text-[10px] font-black leading-none whitespace-nowrap px-1 py-0.5 rounded bg-black/75 text-white shadow pointer-events-none">${st.name}</span>
+              <div class="w-4 h-4 rounded-full ${dotClass} shadow-md flex items-center justify-center text-[7px] font-black leading-none">${st.number}</div>
             </div>
           `;
           
