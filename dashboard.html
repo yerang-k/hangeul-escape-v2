@@ -3,9 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>한글날 방탈출 — 교사용 실시간 조감도 대시보드</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <script>
+    if (localStorage.getItem('hangeul_dashboard_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
@@ -15,9 +21,22 @@
       font-weight: 700; /* 교실 뒤에서도 보이도록 기본 굵기 상향 */
       background-color: #f7f3ed; /* 포근하고 밝은 전통 한지 톤 배경 */
       color: #2b221a; /* 짙은 먹색 텍스트 */
+      transition: background-color .2s, color .2s;
+    }
+    .dark body {
+      background-color: #1c1712; /* 어두운 밤 한지 톤 */
+      color: #e8ddd0;
     }
     .myeongjo {
       font-family: 'Nanum Myeongjo', serif;
+    }
+    :root {
+      --pulse-bg-a: rgba(254, 226, 226, 0.6);
+      --pulse-bg-b: rgba(254, 226, 226, 1);
+    }
+    .dark {
+      --pulse-bg-a: rgba(120, 30, 30, 0.55);
+      --pulse-bg-b: rgba(160, 40, 40, 0.9);
     }
     .stagnant-pulse {
       animation: borderPulse 1.2s infinite alternate;
@@ -26,12 +45,12 @@
       0% {
         border-color: #c62828;
         box-shadow: 0 0 4px rgba(198, 40, 40, 0.4);
-        background-color: rgba(254, 226, 226, 0.6);
+        background-color: var(--pulse-bg-a);
       }
       100% {
         border-color: #ef4444;
         box-shadow: 0 0 16px rgba(239, 68, 68, 0.85);
-        background-color: rgba(254, 226, 226, 1);
+        background-color: var(--pulse-bg-b);
       }
     }
     .student-chip {
@@ -44,28 +63,33 @@
 </head>
 <body class="p-4 md:p-6 max-w-[1600px] mx-auto transition-all duration-300">
   <!-- 상단 헤더 (전통 베이지톤 테마) -->
-  <header class="flex flex-col md:flex-row justify-between items-center border-b border-[#dfd5c6] pb-4 mb-6 gap-4">
+  <header class="flex flex-col md:flex-row justify-between items-center border-b border-[#dfd5c6] dark:border-[#4a4034] pb-4 mb-6 gap-4">
     <div class="flex items-center gap-3">
       <span class="text-4xl">👨‍🏫</span>
       <div>
-        <h1 class="text-4xl font-extrabold text-[#3d2b1a] myeongjo tracking-tight">한글날 방탈출</h1>
-        <p class="text-sm text-[#a67c52] font-bold">실시간 학급별 조감도 모니터링 대시보드</p>
+        <h1 class="text-4xl font-extrabold text-[#3d2b1a] dark:text-[#e8c9a0] myeongjo tracking-tight">한글날 방탈출</h1>
+        <p class="text-sm text-[#a67c52] dark:text-[#c9a06a] font-bold">실시간 학급별 조감도 모니터링 대시보드</p>
       </div>
     </div>
     
     <!-- 반 선택 드롭다운 및 토글 -->
     <div class="flex items-center gap-3">
-      <label for="classSelect" class="text-sm font-bold text-[#8c6239] myeongjo">학급 선택:</label>
-      <select id="classSelect" class="bg-white border-2 border-[#dfd5c6] text-[#5c4033] font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#8c6239] shadow-sm">
+      <label for="classSelect" class="text-sm font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo">학급 선택:</label>
+      <select id="classSelect" class="bg-white dark:bg-[#2a2319] border-2 border-[#dfd5c6] dark:border-[#4a4034] text-[#5c4033] dark:text-[#e8ddd0] font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#8c6239] dark:focus:border-[#c9a06a] shadow-sm">
       </select>
       
+      <!-- 다크모드 토글 버튼 -->
+      <button id="themeToggleBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] dark:bg-[#3a3225] dark:hover:bg-[#463c2c] border border-[#dfd5c6] dark:border-[#4a4034] text-[#5c4033] dark:text-[#e8ddd0] font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+        <span id="themeIcon">🌙</span> <span id="themeText">다크모드</span>
+      </button>
+
       <!-- 리스트뷰 토글 버튼 -->
       <button id="toggleListBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] border border-[#dfd5c6] text-[#5c4033] font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
         <span>📋</span> <span id="toggleText">현황판 접기</span>
       </button>
       
       <!-- 학급 초기화 버튼 -->
-      <button id="clearDataBtn" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+      <button id="clearDataBtn" class="bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
         <span>🧹</span> <span>학급 초기화</span>
       </button>
     </div>
@@ -75,10 +99,10 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 transition-all duration-300" id="mainGrid">
     <!-- 실시간 공간 조감도 뷰 (2열 또는 3열 전체 차지) -->
     <section class="lg:col-span-2 space-y-6 transition-all duration-300" id="mapSection">
-      <div class="bg-white border border-[#dfd5c6] rounded-xl p-5 shadow-lg">
-        <h2 class="text-xl font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between">
+      <div class="bg-white dark:bg-[#241e15] border border-[#dfd5c6] dark:border-[#4a4034] rounded-xl p-5 shadow-lg">
+        <h2 class="text-xl font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo mb-4 flex items-center justify-between">
           <span>🗺️ 실시간 2D 조감도 미니맵</span>
-          <span class="text-sm text-stone-500 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
+          <span class="text-sm text-stone-500 dark:text-stone-400 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
         </h2>
         
         <!-- 4개 방 조감도 그리드 (2x2) -->
@@ -88,17 +112,17 @@
 
         <!-- 최종 완주 성공 구역 (에메랄드 톤 포인트) -->
         <div class="mt-6 border-t border-[#dfd5c6] pt-4">
-          <h3 class="text-sm font-bold text-emerald-700 myeongjo mb-3 flex items-center gap-1.5">
+          <h3 class="text-sm font-bold text-emerald-700 dark:text-emerald-400 myeongjo mb-3 flex items-center gap-1.5">
             <span>🎉</span> 최종 탈출 성공 명단
           </h3>
-          <div class="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 flex flex-wrap gap-2 min-h-[60px]" id="winRoomArea">
-            <div class="text-stone-400 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>
+          <div class="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-xl p-4 flex flex-wrap gap-2 min-h-[60px]" id="winRoomArea">
+            <div class="text-stone-400 dark:text-stone-500 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>
           </div>
         </div>
       </div>
       
       <!-- 요약 정보 / 범례 -->
-      <div class="bg-white/60 border border-[#dfd5c6]/60 rounded-xl p-4 flex flex-wrap gap-5 text-sm text-stone-650">
+      <div class="bg-white/60 dark:bg-black/20 border border-[#dfd5c6]/60 dark:border-[#4a4034]/60 rounded-xl p-4 flex flex-wrap gap-5 text-sm text-stone-600 dark:text-stone-300">
         <div class="flex items-center gap-1.5">
           <span class="inline-block w-3.5 h-3.5 bg-blue-600 rounded-full"></span>
           <span>진행 중 학생</span>
@@ -111,17 +135,17 @@
           <span class="inline-block w-3.5 h-3.5 bg-emerald-600 rounded"></span>
           <span>최종 완주자</span>
         </div>
-        <div class="ml-auto text-stone-500 font-bold">
+        <div class="ml-auto text-stone-500 dark:text-stone-400 font-bold">
           * 학생의 실제 이동에 맞추어 이름 칩이 동적으로 미끄러지며 이동합니다.
         </div>
       </div>
     </section>
 
     <!-- 학생 전체 리스트 뷰 (1열 차지) -->
-    <section class="bg-white border border-[#dfd5c6] rounded-xl p-5 shadow-lg transition-all duration-300" id="listSection">
-      <h2 class="text-xl font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between border-b border-stone-100 pb-2">
+    <section class="bg-white dark:bg-[#241e15] border border-[#dfd5c6] dark:border-[#4a4034] rounded-xl p-5 shadow-lg transition-all duration-300" id="listSection">
+      <h2 class="text-xl font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo mb-4 flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
         <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
-        <span id="studentCount" class="text-sm bg-[#fbf9f6] border border-[#dfd5c6] px-2.5 py-1 rounded-md text-[#8c6239] font-bold">0명 참여 중</span>
+        <span id="studentCount" class="text-sm bg-[#fbf9f6] dark:bg-[#2a2319] border border-[#dfd5c6] dark:border-[#4a4034] px-2.5 py-1 rounded-md text-[#8c6239] dark:text-[#c9a06a] font-bold">0명 참여 중</span>
       </h2>
       
       <div class="space-y-3 overflow-y-auto max-h-[75vh] pr-2" id="studentList">
@@ -222,6 +246,22 @@
       }
     }
     
+    // 다크모드 토글 (교사가 그때그때 켜고 끔, localStorage에 기억)
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+    function applyThemeUI() {
+      const isDark = document.documentElement.classList.contains('dark');
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      themeText.textContent = isDark ? '라이트모드' : '다크모드';
+    }
+    applyThemeUI();
+    themeToggleBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('hangeul_dashboard_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+      applyThemeUI();
+    });
+
     // 리스트 뷰 토글
     let isCollapsed = false;
     toggleListBtn.addEventListener('click', () => {
@@ -284,12 +324,12 @@
         mapsHTML += `
           <div class="flex flex-col items-center gap-1.5">
             <!-- 방 라벨 (박스 밖, 가운데 정렬, 고가독성) -->
-            <div class="text-base md:text-lg font-black text-[#5c4033] myeongjo tracking-wide text-center">
+            <div class="text-base md:text-lg font-black text-[#5c4033] dark:text-[#d9b98a] myeongjo tracking-wide text-center">
               ${ROOM_NAMES[i]}
             </div>
-            <div class="relative bg-[#fcfbfa] border-2 border-[#e8dbcc] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
+            <div class="relative bg-[#fcfbfa] dark:bg-[#241e15] border-2 border-[#e8dbcc] dark:border-[#3d3528] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
             <!-- 3D 좌표 보조선 -->
-            <div class="absolute inset-0 border border-dashed border-[#f2eae1] pointer-events-none z-0"></div>
+            <div class="absolute inset-0 border border-dashed border-[#f2eae1] dark:border-white/10 pointer-events-none z-0"></div>
             
             <!-- 1) 고체 장애물 벽 (선명한 그레이톤으로 톤업) -->
             <div class="absolute inset-0 pointer-events-none z-0">
@@ -302,7 +342,7 @@
           const width = (b.w / 32) * 100;
           const height = (b.d / 32) * 100;
           mapsHTML += `
-            <div class="absolute bg-[#e2d8ce] border border-[#c8bba6] rounded shadow-sm" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
+            <div class="absolute bg-[#e2d8ce] dark:bg-[#3a3225] border border-[#c8bba6] dark:border-[#4a4034] rounded shadow-sm" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
           `;
         });
         
@@ -391,8 +431,8 @@
     }
     
     function renderError(msg) {
-      studentList.innerHTML = `<div class="text-red-650 text-sm p-4 text-center border border-red-200 bg-red-50 rounded-lg">${msg}</div>`;
-      roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 text-sm text-center p-8 border border-[#e8dbcc] bg-white rounded-xl">데이터를 불러올 수 없습니다.</div>`;
+      studentList.innerHTML = `<div class="text-red-650 text-sm p-4 text-center border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 rounded-lg">${msg}</div>`;
+      roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 dark:text-stone-400 text-sm text-center p-8 border border-[#e8dbcc] dark:border-[#3d3528] bg-white dark:bg-[#241e15] rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
     
     const prevRooms = {};
@@ -426,35 +466,35 @@
         const minutesAgo = Math.floor(idleTimeMs / 60000);
         const idleWarning = isStagnant ? `<span class="text-sm text-red-600 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
         
-        let cardClass = "bg-[#fbf9f6] border border-[#dfd5c6] p-3.5 rounded-lg shadow-sm";
+        let cardClass = "bg-[#fbf9f6] dark:bg-[#2a2319] border border-[#dfd5c6] dark:border-[#4a4034] p-3.5 rounded-lg shadow-sm";
         if (isFinished) {
-          cardClass = "bg-emerald-50 border border-emerald-300 p-3.5 rounded-lg shadow-sm";
+          cardClass = "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 p-3.5 rounded-lg shadow-sm";
         } else if (isStagnant) {
-          cardClass = "bg-red-50 border border-red-300 p-3.5 rounded-lg stagnant-pulse";
+          cardClass = "bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 p-3.5 rounded-lg stagnant-pulse";
         }
         
         listHTML += `
           <div class="${cardClass}">
             <div class="flex justify-between items-start mb-1">
               <div class="flex items-center gap-1.5">
-                <span class="text-stone-500 font-mono text-sm font-bold">${st.number}번</span>
+                <span class="text-stone-500 dark:text-stone-400 font-mono text-sm font-bold">${st.number}번</span>
                 <span class="font-extrabold text-stone-850 text-sm">${st.name}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-sm ${isFinished ? 'text-emerald-700 font-extrabold' : 'text-blue-700 font-extrabold'}">${st.progressRate}%</span>
-                <button onclick="removeStudent('${st.number}')" class="text-[#bca693] hover:text-red-600 text-sm font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
+                <span class="text-sm ${isFinished ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-blue-700 dark:text-blue-400 font-extrabold'}">${st.progressRate}%</span>
+                <button onclick="removeStudent('${st.number}')" class="text-[#bca693] dark:text-[#8a7455] hover:text-red-600 dark:hover:text-red-400 text-sm font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
               </div>
             </div>
             
-            <div class="w-full bg-[#eee7de] rounded-full h-1.5 mb-2 overflow-hidden shadow-inner">
+            <div class="w-full bg-[#eee7de] dark:bg-[#3a3225] rounded-full h-1.5 mb-2 overflow-hidden shadow-inner">
               <div class="h-1.5 rounded-full ${isFinished ? 'bg-emerald-600' : 'bg-blue-600'}" style="width: ${st.progressRate}%"></div>
             </div>
             
-            <div class="flex justify-between items-center text-sm text-stone-600 font-bold">
+            <div class="flex justify-between items-center text-sm text-stone-600 dark:text-stone-400 font-bold">
               <span class="truncate max-w-[140px]">${isFinished ? '최종 완주성공!' : (st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
-              <span class="text-[12px] text-stone-500">${timeStr} ${idleWarning}</span>
+              <span class="text-[12px] text-stone-500 dark:text-stone-400">${timeStr} ${idleWarning}</span>
             </div>
-            <div class="text-[13px] text-amber-800 font-bold mt-0.5 truncate">${st.currentStep || ''}</div>
+            <div class="text-[13px] text-amber-800 dark:text-amber-400 font-bold mt-0.5 truncate">${st.currentStep || ''}</div>
           </div>
         `;
         
@@ -462,8 +502,8 @@
         if (isFinished) {
           hasWin = true;
           winHTML += `
-            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 border border-emerald-400 text-emerald-850 font-bold shadow">
-              <span class="font-mono text-[12px] bg-white/60 px-1 rounded border border-emerald-200">${st.number}번</span>
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-400 dark:border-emerald-600 text-emerald-850 font-bold shadow">
+              <span class="font-mono text-[12px] bg-white/60 dark:bg-black/30 px-1 rounded border border-emerald-200 dark:border-emerald-700">${st.number}번</span>
               <span>${st.name}</span>
               <span class="text-[12px] opacity-75 font-normal">(${timeStr})</span>
             </div>
