@@ -11,6 +11,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Gothic:wght@400;700&display=swap');
     body {
       font-family: 'Nanum Gothic', sans-serif;
+      font-weight: 700; /* 교실 뒤에서도 보이도록 기본 굵기 상향 */
       background-color: #f7f3ed; /* 포근하고 밝은 전통 한지 톤 배경 */
       color: #2b221a; /* 짙은 먹색 텍스트 */
     }
@@ -46,8 +47,8 @@
     <div class="flex items-center gap-3">
       <span class="text-4xl">👨‍🏫</span>
       <div>
-        <h1 class="text-2xl font-extrabold text-[#8c6239] myeongjo">훈민정음 대탈출</h1>
-        <p class="text-xs text-[#a67c52] font-semibold">실시간 학급별 조감도 모니터링 대시보드</p>
+        <h1 class="text-3xl font-extrabold text-[#8c6239] myeongjo">훈민정음 대탈출</h1>
+        <p class="text-sm text-[#a67c52] font-bold">실시간 학급별 조감도 모니터링 대시보드</p>
       </div>
     </div>
     
@@ -58,12 +59,12 @@
       </select>
       
       <!-- 리스트뷰 토글 버튼 -->
-      <button id="toggleListBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] border border-[#dfd5c6] text-[#5c4033] font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+      <button id="toggleListBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] border border-[#dfd5c6] text-[#5c4033] font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
         <span>📋</span> <span id="toggleText">현황판 접기</span>
       </button>
       
       <!-- 학급 초기화 버튼 -->
-      <button id="clearDataBtn" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+      <button id="clearDataBtn" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
         <span>🧹</span> <span>학급 초기화</span>
       </button>
     </div>
@@ -74,9 +75,9 @@
     <!-- 실시간 공간 조감도 뷰 (2열 또는 3열 전체 차지) -->
     <section class="lg:col-span-2 space-y-6 transition-all duration-300" id="mapSection">
       <div class="bg-white border border-[#dfd5c6] rounded-xl p-5 shadow-lg">
-        <h2 class="text-lg font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between">
           <span>🗺️ 실시간 2D 조감도 미니맵</span>
-          <span class="text-xs text-stone-500 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
+          <span class="text-sm text-stone-500 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
         </h2>
         
         <!-- 4개 방 조감도 그리드 (2x2) -->
@@ -90,13 +91,13 @@
             <span>🎉</span> 최종 탈출 성공 명단
           </h3>
           <div class="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 flex flex-wrap gap-2 min-h-[60px]" id="winRoomArea">
-            <div class="text-stone-400 text-xs my-auto italic">아직 완주한 학생이 없습니다.</div>
+            <div class="text-stone-400 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>
           </div>
         </div>
       </div>
       
       <!-- 요약 정보 / 범례 -->
-      <div class="bg-white/60 border border-[#dfd5c6]/60 rounded-xl p-4 flex flex-wrap gap-5 text-xs text-stone-650">
+      <div class="bg-white/60 border border-[#dfd5c6]/60 rounded-xl p-4 flex flex-wrap gap-5 text-sm text-stone-650">
         <div class="flex items-center gap-1.5">
           <span class="inline-block w-3.5 h-3.5 bg-blue-600 rounded-full"></span>
           <span>진행 중 학생</span>
@@ -109,7 +110,7 @@
           <span class="inline-block w-3.5 h-3.5 bg-emerald-600 rounded"></span>
           <span>최종 완주자</span>
         </div>
-        <div class="ml-auto text-stone-500 font-medium">
+        <div class="ml-auto text-stone-500 font-bold">
           * 학생의 실제 이동에 맞추어 이름 칩이 동적으로 미끄러지며 이동합니다.
         </div>
       </div>
@@ -117,9 +118,9 @@
 
     <!-- 학생 전체 리스트 뷰 (1열 차지) -->
     <section class="bg-white border border-[#dfd5c6] rounded-xl p-5 shadow-lg transition-all duration-300" id="listSection">
-      <h2 class="text-lg font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between border-b border-stone-100 pb-2">
+      <h2 class="text-xl font-bold text-[#8c6239] myeongjo mb-4 flex items-center justify-between border-b border-stone-100 pb-2">
         <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
-        <span id="studentCount" class="text-xs bg-[#fbf9f6] border border-[#dfd5c6] px-2.5 py-1 rounded-md text-[#8c6239] font-bold">0명 참여 중</span>
+        <span id="studentCount" class="text-sm bg-[#fbf9f6] border border-[#dfd5c6] px-2.5 py-1 rounded-md text-[#8c6239] font-bold">0명 참여 중</span>
       </h2>
       
       <div class="space-y-3 overflow-y-auto max-h-[75vh] pr-2" id="studentList">
@@ -280,12 +281,12 @@
       let mapsHTML = '';
       for (let i = 0; i < 4; i++) {
         mapsHTML += `
-          <div class="relative bg-[#fcfbfa] border-2 border-[#e8dbcc] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md" id="roomMapBox_${i}">
-            <!-- 방 라벨 (고가독성) -->
-            <div class="absolute top-2.5 left-2.5 z-10 text-xs font-bold text-white bg-[#8c6239] border border-[#5c4033] px-2 py-0.5 rounded shadow">
+          <div class="flex flex-col items-center gap-1.5">
+            <!-- 방 라벨 (박스 밖, 가운데 정렬, 고가독성) -->
+            <div class="text-base md:text-lg font-black text-[#5c4033] myeongjo tracking-wide text-center">
               ${ROOM_NAMES[i]}
             </div>
-            
+            <div class="relative bg-[#fcfbfa] border-2 border-[#e8dbcc] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
             <!-- 3D 좌표 보조선 -->
             <div class="absolute inset-0 border border-dashed border-[#f2eae1] pointer-events-none z-0"></div>
             
@@ -330,7 +331,7 @@
           }
           
           mapsHTML += `
-            <div class="absolute flex flex-col items-center justify-center text-[10px] md:text-[11px] overflow-hidden leading-tight ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
+            <div class="absolute flex flex-col items-center justify-center text-[12px] md:text-[13px] overflow-hidden leading-tight ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
               <span class="scale-95 transform origin-center text-center truncate max-w-full px-0.5">${f.name}</span>
             </div>
           `;
@@ -341,6 +342,7 @@
             
             <!-- 3) 학생 칩 컨테이너 -->
             <div class="absolute inset-0 z-20" id="roomMapChips_${i}"></div>
+            </div>
           </div>
         `;
       }
@@ -420,7 +422,7 @@
         // 1) 리스트 뷰 카드 (밝은 웜그레이 톤 고대비 리폼)
         const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const minutesAgo = Math.floor(idleTimeMs / 60000);
-        const idleWarning = isStagnant ? `<span class="text-xs text-red-600 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
+        const idleWarning = isStagnant ? `<span class="text-sm text-red-600 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
         
         let cardClass = "bg-[#fbf9f6] border border-[#dfd5c6] p-3.5 rounded-lg shadow-sm";
         if (isFinished) {
@@ -433,12 +435,12 @@
           <div class="${cardClass}">
             <div class="flex justify-between items-start mb-1">
               <div class="flex items-center gap-1.5">
-                <span class="text-stone-500 font-mono text-xs font-bold">${st.number}번</span>
+                <span class="text-stone-500 font-mono text-sm font-bold">${st.number}번</span>
                 <span class="font-extrabold text-stone-850 text-sm">${st.name}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-xs ${isFinished ? 'text-emerald-700 font-extrabold' : 'text-blue-700 font-extrabold'}">${st.progressRate}%</span>
-                <button onclick="removeStudent('${st.number}')" class="text-[#bca693] hover:text-red-600 text-xs font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
+                <span class="text-sm ${isFinished ? 'text-emerald-700 font-extrabold' : 'text-blue-700 font-extrabold'}">${st.progressRate}%</span>
+                <button onclick="removeStudent('${st.number}')" class="text-[#bca693] hover:text-red-600 text-sm font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
               </div>
             </div>
             
@@ -446,11 +448,11 @@
               <div class="h-1.5 rounded-full ${isFinished ? 'bg-emerald-600' : 'bg-blue-600'}" style="width: ${st.progressRate}%"></div>
             </div>
             
-            <div class="flex justify-between items-center text-xs text-stone-600 font-medium">
+            <div class="flex justify-between items-center text-sm text-stone-600 font-bold">
               <span class="truncate max-w-[140px]">${isFinished ? '최종 완주성공!' : (st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
-              <span class="text-[10px] text-stone-500">${timeStr} ${idleWarning}</span>
+              <span class="text-[12px] text-stone-500">${timeStr} ${idleWarning}</span>
             </div>
-            <div class="text-[11px] text-amber-800 font-bold mt-0.5 truncate">${st.currentStep || ''}</div>
+            <div class="text-[13px] text-amber-800 font-bold mt-0.5 truncate">${st.currentStep || ''}</div>
           </div>
         `;
         
@@ -458,10 +460,10 @@
         if (isFinished) {
           hasWin = true;
           winHTML += `
-            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-emerald-100 border border-emerald-400 text-emerald-850 font-bold shadow">
-              <span class="font-mono text-[10px] bg-white/60 px-1 rounded border border-emerald-200">${st.number}번</span>
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 border border-emerald-400 text-emerald-850 font-bold shadow">
+              <span class="font-mono text-[12px] bg-white/60 px-1 rounded border border-emerald-200">${st.number}번</span>
               <span>${st.name}</span>
-              <span class="text-[10px] opacity-75 font-normal">(${timeStr})</span>
+              <span class="text-[12px] opacity-75 font-normal">(${timeStr})</span>
             </div>
           `;
           
@@ -493,15 +495,15 @@
             colorClass = "bg-[#d32f2f] border border-[#ffd54f] text-white font-black stagnant-pulse";
           }
           
-          let numberSpan = `<span class="font-mono text-[9px] bg-[#5c4033]/15 text-[#2b1f15] px-1 rounded font-bold">${st.number}</span>`;
-          let textSpan = `<span class="text-xs text-[#2b1f15] font-extrabold">${st.name}</span>`;
+          let numberSpan = `<span class="font-mono text-[13px] bg-[#5c4033]/15 text-[#2b1f15] px-1 rounded font-bold">${st.number}</span>`;
+          let textSpan = `<span class="text-sm text-[#2b1f15] font-extrabold">${st.name}</span>`;
           if (isStagnant) {
-            numberSpan = `<span class="font-mono text-[9px] bg-white/20 text-white px-1 rounded font-bold">${st.number}</span>`;
-            textSpan = `<span class="text-xs text-white font-extrabold">${st.name}</span>`;
+            numberSpan = `<span class="font-mono text-[13px] bg-white/20 text-white px-1 rounded font-bold">${st.number}</span>`;
+            textSpan = `<span class="text-sm text-white font-extrabold">${st.name}</span>`;
           }
           
           chip.innerHTML = `
-            <div class="px-2.5 py-1 rounded-full text-xs ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
+            <div class="px-2.5 py-1 rounded-full text-sm ${colorClass} whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
               ${numberSpan}
               ${textSpan}
             </div>
@@ -529,7 +531,7 @@
       });
       
       studentList.innerHTML = listHTML || `<div class="text-stone-400 text-center py-10 text-sm italic">참여 중인 학생이 없습니다.</div>`;
-      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-450 text-xs my-auto italic">아직 완주한 학생이 없습니다.</div>`;
+      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-450 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>`;
       
       const existingChips = document.querySelectorAll('.student-chip');
       existingChips.forEach(chip => {
