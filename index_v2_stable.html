@@ -1210,10 +1210,11 @@ function openRoomIntro(room){
     <div class="row-btns"><span></span><button class="btn" onclick="closeOverlay()">알겠다</button></div>`;
   $('#overlay').style.display='flex';
 }
+function josa(w,cons,vowel){const c=(w||'').trim().slice(-1).charCodeAt(0)-0xAC00;return(c<0||c>11171)?vowel:(c%28===0?vowel:cons);}
 function openStation(st){
   S.paused=true;
   document.body.classList.add('modal-open');
-  if(st.lock&&!S.items.includes(st.lock)){flashModal(st.name,`🔒 굳게 잠겨 있다.<br><b>${st.lock}</b>가 있어야 열 수 있다.`);return;}
+  if(st.lock&&!S.items.includes(st.lock)){flashModal(st.name,`🔒 굳게 잠겨 있다.<br><b>${st.lock}</b>${josa(st.lock,'이','가')} 있어야 열 수 있다.`);return;}
   if(st.type==='safe'){openSafe();return;}
   if(st.type==='info'){openInfo(st);return;}
   openPuzzle(st);
