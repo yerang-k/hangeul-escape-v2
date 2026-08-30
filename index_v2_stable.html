@@ -546,7 +546,9 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     sw.appendChild(d);});
   $('#toIntro').onclick=()=>{
     player.name=($('#nameIn').value.trim()||'탐험가').slice(0,8);
-    S.startTime = Date.now();
+    const _origStart = localStorage.getItem('hangeul_escape_origStart');
+    S.startTime = _origStart ? Number(_origStart) : Date.now();
+    localStorage.setItem('hangeul_escape_origStart', String(S.startTime));
     S.wrongCounts = {};
     localStorage.removeItem('hangeul_escape_save');
     $('#setup').style.display='none'; $('#intro').style.display='flex';
@@ -1386,6 +1388,7 @@ function win(){
   const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
   const durationStr = `${elapsedMin}분 ${elapsedSec}초`;
   localStorage.removeItem('hangeul_escape_save');
+  localStorage.removeItem('hangeul_escape_origStart');
   const code=makeCode();
   $('#wintext').innerHTML=`네 개의 방을 모두 빠져나왔다!<br>1443 창제 · 1446 반포 · 1997 세계유산 등재 · 10월 9일 한글날.<br><b>${player.name}</b>, 너는 훈민정음의 길을 완주했다.<br>(소요 시간: <b>${durationStr}</b>)`;
   $('#wincode').textContent=code;$('#wintime').textContent=new Date().toLocaleString('ko-KR')+' 완주';
