@@ -1200,10 +1200,15 @@ async function initNet(){
       firebase.initializeApp(F);
     }
     const db=firebase.database();
-    const code=(player.session||'default').replace(/[.#$/\[\]]/g,'_');
+    // 반(classId)별로 멀티플레이 방을 분리 — 예전엔 player.session이 항상 비어 있어 전국 모든 반이 한 방에 섞여 보였음
+    const code=(player.classId||'default').replace(/[.#$/\[\]]/g,'_');
     net.pid = `c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
     net.me=db.ref('s/'+code+'/p/'+net.pid); net.me.onDisconnect().remove();
-    db.ref('s/'+code+'/p').on('value',snap=>{net.data=snap.val()||{};});
+    // 학생 한 명이 위치를 보낼 때마다 반 전체 목록을 다시 받지 않도록, 바뀐 한 명만 구독
+    const pRef=db.ref('s/'+code+'/p');
+    pRef.on('child_added', snap=>{net.data[snap.key]=snap.val();});
+    pRef.on('child_changed', snap=>{net.data[snap.key]=snap.val();});
+    pRef.on('child_removed', snap=>{delete net.data[snap.key];});
     net.ready=true;
   }catch(e){ console.warn('멀티 연결 실패, 1인용으로 진행',e); }
 }
@@ -1354,7 +1359,7 @@ function animate(){
   if (!S.paused) {
     const distSq = Math.pow(hero.position.x - lastPos.x, 2) + Math.pow(hero.position.z - lastPos.z, 2);
     const nowTime = Date.now();
-    if (distSq > 0.02 && nowTime - lastPosSendTime >= 1000) {
+    if (distSq > 0.02 && nowTime - lastPosSendTime >= 400) {
       lastPosSendTime = nowTime;
       lastPos.x = hero.position.x;
       lastPos.z = hero.position.z;
@@ -1579,7 +1584,7 @@ function win(){
   localStorage.removeItem('hangeul_escape_save');
   localStorage.removeItem('hangeul_escape_origStart');
   const code=makeCode();
-  $('#wintext').innerHTML=`네 개의 방을 모두 빠져나왔다!<br>1443 창제 · 1446 반포 · 1997 세계유산 등재 · 10월 9일 한글날.<br><b>${player.name}</b>, 너는 훈민정음의 길을 완주했다.<br>(소요 시간: <b>${durationStr}</b>)`;
+  $('#wintext').innerHTML=`네 개의 방을 모두 빠져나왔다!<br>1443 창제 · 1446 반포 · 1997 세계유산 등재 · 10월 9일 한글날.<br><b>${esc(player.name)}</b>, 너는 훈민정음의 길을 완주했다.<br>(소요 시간: <b>${durationStr}</b>)`;
   $('#wincode').textContent=code;$('#wintime').textContent=new Date().toLocaleString('ko-KR')+' 완주';
   const inpS="flex:1;min-width:0;font:inherit;font-size:1rem;color:var(--ink);background:#1d150c;border:1px solid #4a381f;border-radius:10px;padding:10px 12px";
   if(CONFIG.FORM_URL && CONFIG.FORM_ENTRIES.id){

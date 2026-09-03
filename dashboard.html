@@ -54,7 +54,7 @@
       }
     }
     .student-chip {
-      transition: left 0.9s linear, top 0.9s linear;
+      transition: left 0.35s linear, top 0.35s linear;
     }
     .no-transition {
       transition: none !important;
@@ -179,6 +179,9 @@
     let studentsData = {};
     const ROOM_NAMES = ['제1방 (창제의 방)', '제2방 (규범의 방)', '제3방 (보물의 방)', '제4방 (한글날의 방)'];
     const CHAR_COLORS = ['#e57373', '#64b5f6', '#81c784', '#ba68c8', '#4db6ac', '#f06292', '#a1887f', '#7986cb'];
+    // 학생 이름 등은 게임 쪽에서 통제되지 않은 값일 수 있어 innerHTML에 꽂기 전 반드시 이스케이프
+    function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function safeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : null; }
     
     // 3D 맵 실제 장애물 정보 (x, z, w, d)
     const ROOM_BLOCKS = [
@@ -436,18 +439,28 @@
       studentsData = {};
       renderDashboard();
       
-      fbRef = db.ref('classes/' + currentClass);
-      fbRef.on('value', (snapshot) => {
-        studentsData = snapshot.val() || {};
-        renderDashboard();
-      }, (error) => {
+      // 학생 한 명이 바뀔 때마다 학급 전체를 통째로 다시 받지 않도록, 바뀐 학생 한 명씩만 구독
+      // (인원이 많아질수록 예전 방식은 매번 전체 목록을 다시 그려서 버벅였음)
+      const onFbError = (error) => {
         console.error("Firebase 수신 에러:", error);
         renderError("실시간 데이터 연결 오류가 발생했습니다.");
-      });
+      };
+      fbRef = db.ref('classes/' + currentClass);
+      fbRef.on('child_added', (snap) => { studentsData[snap.key] = snap.val(); scheduleRender(); }, onFbError);
+      fbRef.on('child_changed', (snap) => { studentsData[snap.key] = snap.val(); scheduleRender(); }, onFbError);
+      fbRef.on('child_removed', (snap) => { delete studentsData[snap.key]; scheduleRender(); }, onFbError);
+    }
+
+    // 여러 학생이 같은 순간에 위치를 보내도 화면은 프레임당 한 번만 다시 그림
+    let renderScheduled = false;
+    function scheduleRender() {
+      if (renderScheduled) return;
+      renderScheduled = true;
+      requestAnimationFrame(() => { renderScheduled = false; renderDashboard(); });
     }
     
     function renderError(msg) {
-      studentList.innerHTML = `<div class="text-red-650 text-sm p-4 text-center border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 rounded-lg">${msg}</div>`;
+      studentList.innerHTML = `<div class="text-red-600 text-sm p-4 text-center border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 rounded-lg">${msg}</div>`;
       roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 dark:text-stone-400 text-sm text-center p-8 border border-[#e8dbcc] dark:border-[#3d3528] bg-white dark:bg-[#241e15] rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
     
@@ -513,7 +526,7 @@
             <div class="flex justify-between items-start mb-1">
               <div class="flex items-center gap-1.5">
                 <span class="text-stone-500 dark:text-stone-400 font-mono text-sm font-bold">${st.number}번</span>
-                <span class="font-extrabold text-stone-850 text-sm">${st.name}</span>
+                <span class="font-extrabold text-stone-800 text-sm">${esc(st.name)}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-sm ${isFinished ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-blue-700 dark:text-blue-400 font-extrabold'}">${st.progressRate}%</span>
@@ -526,10 +539,10 @@
             </div>
             
             <div class="flex justify-between items-center text-sm text-stone-600 dark:text-stone-400 font-bold">
-              <span class="truncate max-w-[140px]">${isFinished ? '최종 완주성공!' : (st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
+              <span class="truncate max-w-[140px]">${isFinished ? '최종 완주성공!' : esc(st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
               <span class="text-[12px] text-stone-500 dark:text-stone-400">${timeStr} ${idleWarning}</span>
             </div>
-            <div class="text-[13px] text-amber-800 dark:text-amber-400 font-bold mt-0.5 truncate">${st.currentStep || ''}</div>
+            <div class="text-[13px] text-amber-800 dark:text-amber-400 font-bold mt-0.5 truncate">${esc(st.currentStep || '')}</div>
           </div>
         `;
         
@@ -537,9 +550,9 @@
         if (isFinished) {
           hasWin = true;
           winHTML += `
-            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-400 dark:border-emerald-600 text-emerald-850 font-bold shadow">
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-400 dark:border-emerald-600 text-emerald-800 font-bold shadow">
               <span class="font-mono text-[12px] bg-white/60 dark:bg-black/30 px-1 rounded border border-emerald-200 dark:border-emerald-700">${st.number}번</span>
-              <span>${st.name}</span>
+              <span>${esc(st.name)}</span>
               <span class="text-[12px] opacity-75 font-normal">(${timeStr})</span>
             </div>
           `;
@@ -568,12 +581,13 @@
           }
 
           // 게임 속 한복 캐릭터를 그대로 미니맵에 재현: 학생이 고른 치마 색 반영, 이름은 머리 위에 떠서 이동.
-          const skirtColor = st.color || CHAR_COLORS[st.number % CHAR_COLORS.length];
+          const skirtColor = safeColor(st.color) || CHAR_COLORS[st.number % CHAR_COLORS.length];
           const nameClass = isStagnant ? 'text-red-500' : 'text-[#fff3d6]';
+          const safeTitle = esc(`${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}`);
 
           chip.innerHTML = `
-            <div class="flex flex-col items-center cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
-              <div class="text-[10px] font-black leading-none whitespace-nowrap mb-0.5 ${nameClass}" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px rgba(0,0,0,.7)">${st.name}</div>
+            <div class="flex flex-col items-center cursor-help" title="${safeTitle}">
+              <div class="text-[10px] font-black leading-none whitespace-nowrap mb-0.5 ${nameClass}" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px rgba(0,0,0,.7)">${esc(st.name)}</div>
               ${hanbokSVG(skirtColor, isStagnant)}
             </div>
           `;
@@ -600,7 +614,7 @@
       });
       
       studentList.innerHTML = listHTML || `<div class="text-stone-400 text-center py-10 text-sm italic">참여 중인 학생이 없습니다.</div>`;
-      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-450 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>`;
+      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-400 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>`;
       
       const existingChips = document.querySelectorAll('.student-chip');
       existingChips.forEach(chip => {
