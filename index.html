@@ -735,6 +735,7 @@ function syncFirebase(event) {
     const updates = {
       number: Number(number),
       name: player.name || '탐험가',
+      color: '#' + (player.shirt >>> 0).toString(16).padStart(6, '0'),
       currentRoom: roomIdx,
       currentRoomName: roomName,
       currentStep: currentStep,

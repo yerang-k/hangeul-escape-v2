@@ -15,9 +15,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Gothic:wght@400;700&display=swap');
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
     body {
-      font-family: 'Nanum Gothic', sans-serif;
+      font-family: 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif;
       font-weight: 700; /* 교실 뒤에서도 보이도록 기본 굵기 상향 */
       background-color: #f7f3ed; /* 포근하고 밝은 전통 한지 톤 배경 */
       color: #2b221a; /* 짙은 먹색 텍스트 */
@@ -28,7 +28,7 @@
       color: #e8ddd0;
     }
     .myeongjo {
-      font-family: 'Nanum Myeongjo', serif;
+      font-family: inherit; /* 궁서체/바탕체 느낌의 명조체 제거, 시인성 위해 본문과 동일한 산세리프 유지 */
     }
     :root {
       --pulse-bg-a: rgba(254, 226, 226, 0.6);
@@ -58,6 +58,21 @@
     }
     .no-transition {
       transition: none !important;
+    }
+    /* 걸어다니는 캐릭터 모션: 항상 제자리 걸음처럼 살짝 흔들림 */
+    @keyframes charWalk {
+      0%, 100% { transform: translateY(0) rotate(-6deg); }
+      50% { transform: translateY(-2px) rotate(6deg); }
+    }
+    .char-walk {
+      animation: charWalk 0.5s ease-in-out infinite;
+    }
+    @keyframes stagnantGlow {
+      0% { filter: drop-shadow(0 0 2px #d32f2f); }
+      100% { filter: drop-shadow(0 0 7px #d32f2f); }
+    }
+    .char-stagnant {
+      animation: charWalk 0.5s ease-in-out infinite, stagnantGlow 0.9s infinite alternate;
     }
   </style>
 </head>
@@ -163,6 +178,7 @@
     let currentClass = '1-1';
     let studentsData = {};
     const ROOM_NAMES = ['제1방 (창제의 방)', '제2방 (규범의 방)', '제3방 (보물의 방)', '제4방 (한글날의 방)'];
+    const CHAR_COLORS = ['#e57373', '#64b5f6', '#81c784', '#ba68c8', '#4db6ac', '#f06292', '#a1887f', '#7986cb'];
     
     // 3D 맵 실제 장애물 정보 (x, z, w, d)
     const ROOM_BLOCKS = [
@@ -327,7 +343,7 @@
             <div class="text-base md:text-lg font-black text-[#5c4033] dark:text-[#d9b98a] myeongjo tracking-wide text-center">
               ${ROOM_NAMES[i]}
             </div>
-            <div class="relative bg-[#fcfbfa] dark:bg-[#241e15] border-2 border-[#e8dbcc] dark:border-[#3d3528] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
+            <div class="relative bg-[#fcfbfa] dark:bg-[#241e15] border-[5px] border-[#5c4033] dark:border-[#c9a06a] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
             <!-- 3D 좌표 보조선 -->
             <div class="absolute inset-0 border border-dashed border-[#f2eae1] dark:border-white/10 pointer-events-none z-0"></div>
             
@@ -435,6 +451,25 @@
       roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 dark:text-stone-400 text-sm text-center p-8 border border-[#e8dbcc] dark:border-[#3d3528] bg-white dark:bg-[#241e15] rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
     
+    // 게임 3D 한복 캐릭터(buildAvatar)를 2D 미니맵용으로 단순화: 저고리(크림)+치마(학생 선택색)+고름/버선(고동)
+    function hanbokSVG(skirtColor, isStagnant) {
+      return `
+        <svg class="${isStagnant ? 'char-stagnant' : 'char-walk'}" width="22" height="30" viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="8" width="3" height="6" rx="1" fill="#f3ece0"/>
+          <rect x="16" y="8" width="3" height="6" rx="1" fill="#f3ece0"/>
+          <path d="M4,14.4 L16,14.4 L18,26 L2,26 Z" fill="${skirtColor}"/>
+          <rect x="2" y="24" width="16" height="2" fill="#8a2f2e"/>
+          <rect x="5" y="6" width="10" height="7" fill="#f3ece0"/>
+          <rect x="4" y="12" width="12" height="2.4" fill="${skirtColor}"/>
+          <rect x="8.6" y="8.3" width="1.4" height="3.4" fill="#8a2f2e"/>
+          <ellipse cx="10" cy="4" rx="4" ry="4" fill="#f4c48c"/>
+          <path d="M6,2 A4,4 0 0,1 14,2 Z" fill="#241a12"/>
+          <rect x="5" y="2.5" width="1.6" height="5" fill="#241a12"/>
+          <rect x="13.4" y="2.5" width="1.6" height="5" fill="#241a12"/>
+        </svg>
+      `;
+    }
+
     const prevRooms = {};
     
     function renderDashboard() {
@@ -532,14 +567,15 @@
             document.body.appendChild(chip);
           }
 
-          // 이름표만 돌아다님(번호 없음): 평소 노랑, 정체 시 빨강. 한 방에 20명+ 몰려도 자리를 적게 차지하도록 작게.
-          let labelClass = "bg-[#ffd54f] border border-[#5c4033] text-[#2b1f15]";
-          if (isStagnant) {
-            labelClass = "bg-[#d32f2f] border border-[#ffd54f] text-white stagnant-pulse";
-          }
+          // 게임 속 한복 캐릭터를 그대로 미니맵에 재현: 학생이 고른 치마 색 반영, 이름은 머리 위에 떠서 이동.
+          const skirtColor = st.color || CHAR_COLORS[st.number % CHAR_COLORS.length];
+          const nameClass = isStagnant ? 'text-red-500' : 'text-[#fff3d6]';
 
           chip.innerHTML = `
-            <div class="px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none whitespace-nowrap shadow-md cursor-help ${labelClass}" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">${st.name}</div>
+            <div class="flex flex-col items-center cursor-help" title="${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}">
+              <div class="text-[10px] font-black leading-none whitespace-nowrap mb-0.5 ${nameClass}" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px rgba(0,0,0,.7)">${st.name}</div>
+              ${hanbokSVG(skirtColor, isStagnant)}
+            </div>
           `;
           
           if (isRoomChanged) {
