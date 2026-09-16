@@ -20,6 +20,7 @@
     padding:8px 12px;background:linear-gradient(#000000bb,#0000);pointer-events:none}
   #hud .title{color:var(--gold);font-size:.8rem;letter-spacing:.1em}
   #hud .title b{color:var(--ink);font-size:.95rem}
+  #elapsedTime{color:var(--ink-dim);font-size:.72rem;margin-top:2px;letter-spacing:.03em}
   #safe{display:flex;gap:6px}
   .slot{position:relative;width:28px;height:36px;border:1.5px solid var(--gold-dim);border-radius:6px;
     display:grid;place-items:center;font-size:1.2rem;font-weight:800;color:var(--gold);background:#0007}
@@ -88,7 +89,7 @@
   #fade .rn{color:var(--gold);font-size:1.6rem} #fade .rc{color:var(--ink-dim)}
 
   #win{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(#3a2a17,#0d0805)}
-  #win .card{background:#241a10;border:1px solid var(--gold);border-radius:18px;padding:26px 22px;max-width:440px;text-align:center;box-shadow:0 0 50px #e0b35744}
+  #win .card{background:#241a10;border:1px solid var(--gold);border-radius:18px;padding:26px 22px;max-width:440px;max-height:92vh;overflow-y:auto;text-align:center;box-shadow:0 0 50px #e0b35744}
   #win .big{font-size:2rem;color:var(--gold);margin:.2em 0}
   .code{font-size:1.5rem;letter-spacing:.1em;color:#1a120b;background:var(--gold);display:inline-block;padding:10px 20px;border-radius:12px;font-weight:800;margin:10px 0}
   a.btn{text-decoration:none;display:inline-block}
@@ -161,7 +162,10 @@
 <body class="modal-open">
 
 <div id="hud">
-  <div class="title" id="roomlabel"></div>
+  <div>
+    <div class="title" id="roomlabel"></div>
+    <div id="elapsedTime"></div>
+  </div>
   <div id="safe"></div>
   <div id="items"></div>
 </div>
@@ -175,10 +179,9 @@
 <div id="win"><div class="card">
   <div class="big">🗝️ 최종 탈출!</div>
   <p id="wintext"></p>
-  <div>완주 코드</div><div class="code" id="wincode"></div><br>
-  <button class="btn ghost" id="copy">코드 복사</button>
   <div id="winsubmit" style="margin-top:16px"></div>
   <div class="fine" id="wintime"></div>
+  <div id="leaderboard"></div>
 </div></div>
 
 <div id="loading"><div class="spin"></div><div>방을 짓는 중…</div></div>
@@ -192,7 +195,7 @@
     </select>
     <input class="fld" id="numIn" type="number" min="1" max="50" placeholder="번호" style="flex:1;margin:0" inputmode="numeric">
   </div>
-  <input class="fld" id="nameIn" maxlength="8" placeholder="이름 (최대 8자)" style="margin-top:0">
+  <input class="fld" id="nameIn" maxlength="4" placeholder="이름 (최대 4자)" style="margin-top:0">
   <div class="swatches" id="swatches"></div>
   <div style="display:flex;gap:10px;justify-content:center;margin-top:6px;width:100%">
     <button class="btn" id="toIntro" style="font-size:1.1rem;padding:12px 26px;flex:1">확인</button>
@@ -616,7 +619,7 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
 
     player.classId = classId;
     player.number = number;
-    player.name = name.slice(0,8);
+    player.name = name.slice(0,4);
     const _origStart = localStorage.getItem('hangeul_escape_origStart');
     S.startTime = _origStart ? Number(_origStart) : Date.now();
     localStorage.setItem('hangeul_escape_origStart', String(S.startTime));
@@ -678,6 +681,10 @@ function saveGame(){
 }
 
 /* ---------- Firebase 실시간 모니터링 상태 동기화 ---------- */
+// 대시보드는 반(1-10) 단위가 아니라 학년(특별실) 단위 3개로 운영 — 학급은 학생 식별용으로만 유지
+const VENUE_NAMES = {'1':'시청각실','2':'대회의실','3':'수학전용실'};
+function venueId(classId){ return (classId||'1').split('-')[0]; }
+function dashKey(classId, number){ return 'student_'+(classId+'_'+number).replace(/[.#$/\[\]]/g,'_'); }
 function syncFirebase(event) {
   if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
     return;
@@ -734,6 +741,7 @@ function syncFirebase(event) {
     
     const updates = {
       number: Number(number),
+      classId: classId,
       name: player.name || '탐험가',
       color: '#' + (player.shirt >>> 0).toString(16).padStart(6, '0'),
       currentRoom: roomIdx,
@@ -742,8 +750,8 @@ function syncFirebase(event) {
       progressRate: Math.min(100, progressRate),
       lastUpdated: Date.now()
     };
-    
-    db.ref('classes/' + classId + '/student_' + number).update(updates);
+
+    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number)).update(updates);
   } catch (e) {
     console.warn('Firebase 상태 동기화 실패:', e);
   }
@@ -756,7 +764,7 @@ function syncFirebasePosition(x, z) {
     const classId = player.classId || '1';
     const number = player.number || 1;
     const db = firebase.database();
-    db.ref('classes/' + classId + '/student_' + number).update({
+    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number)).update({
       x: Math.round(x * 100) / 100,
       z: Math.round(z * 100) / 100,
       lastUpdated: Date.now()
@@ -768,7 +776,14 @@ function syncFirebasePosition(x, z) {
 function renderHUD(){const L=['천','백','십','일'];
   $('#roomlabel').innerHTML=`<b>${CUR().name}</b> &nbsp;(${progress.room+1}/${ROOMS.length})`;
   $('#safe').innerHTML=S.digits.map((d,i)=>`<div class="slot">${d}<small>${L[i]}</small></div>`).join('');
-  $('#items').textContent=S.items.map(i=>i.split(' ')[0]).join('');}
+  $('#items').textContent=S.items.map(i=>i.split(' ')[0]).join('');
+  updateElapsedDisplay();}
+/* 경과 시간 표시: 1초마다 갱신, 재입장/방 전환과 무관하게 항상 S.startTime 기준 실경과시간 */
+function updateElapsedDisplay(){
+  const el=$('#elapsedTime'); if(!el||!S.startTime) return;
+  el.textContent='⏱ '+fmtDuration(Date.now()-S.startTime);
+}
+setInterval(updateElapsedDisplay,1000);
 
 /* ==================== 3D 시작 ==================== */
 $('#startBtn').onclick=()=>{ personalize(); $('#intro').style.display='none'; if(typeof THREE!=='undefined') start3D(); };
@@ -1118,7 +1133,10 @@ function buildRoom(i, isResume){
     dustField=new THREE.Points(geo,pm); roomGroup.add(dustField); }
   if(!isResume){
     S.done={}; S.digits=R.code.split('').map(()=>'?'); S.items=[]; S.paused=false;
-    S.wrongCounts={}; S.startTime=Date.now();
+    S.wrongCounts={};
+    // 주의: 여기서 S.startTime을 건드리면 안 됨 — 이건 방 전환 때마다 실행되는 코드라
+    // 총 소요시간이 아니라 '마지막 방에서 보낸 시간'만 재게 되어 공정하지 않음.
+    // 전체 시작 시각은 설정 화면(#toIntro)의 origStart 로직에서만 정한다.
   } else {
     S.paused=false;
   }
@@ -1200,8 +1218,8 @@ async function initNet(){
       firebase.initializeApp(F);
     }
     const db=firebase.database();
-    // 반(classId)별로 멀티플레이 방을 분리 — 예전엔 player.session이 항상 비어 있어 전국 모든 반이 한 방에 섞여 보였음
-    const code=(player.classId||'default').replace(/[.#$/\[\]]/g,'_');
+    // 학년(특별실) 단위로 멀티플레이 방을 분리 — 같은 특별실에 여러 반이 함께 있으므로 반이 아니라 학년 기준으로 묶는다
+    const code=venueId(player.classId).replace(/[.#$/\[\]]/g,'_');
     net.pid = `c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
     net.me=db.ref('s/'+code+'/p/'+net.pid); net.me.onDisconnect().remove();
     // 학생 한 명이 위치를 보낼 때마다 반 전체 목록을 다시 받지 않도록, 바뀐 한 명만 구독
@@ -1549,17 +1567,17 @@ function finishRoom(){ syncFirebase('safe'); if(progress.room>=ROOMS.length-1)wi
 function makeCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');
   const rnd=Array.from({length:2},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
   return `HG-${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}-${rnd}`;}
-function submitSheet(code, duration){
+function submitSheet(code, duration, elapsedMs){
   const sid=($('#sid').value||'').trim(), nm=($('#snm').value||'').trim();
   const msg=$('#sheetMsg');
   if(!sid||!nm){ msg.style.color='var(--no)'; msg.textContent='학번과 이름을 모두 입력하세요.'; return; }
   const btn=$('#sheetBtn'); btn.disabled=true; btn.textContent='제출 중…'; msg.style.color='var(--ink-dim)'; msg.textContent='';
   fetch(CONFIG.SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify({studentId:sid,name:nm,code:code,time:new Date().toISOString(),duration:duration})})
-   .then(()=>{ msg.style.color='var(--ok)'; msg.innerHTML='✅ 저장되었습니다. 이 화면을 선생님께 보여주세요.'; btn.textContent='제출 완료'; })
+   .then(()=>{ msg.style.color='var(--ok)'; msg.textContent='✅ 제출 완료되었습니다.'; btn.disabled=false; btn.textContent='🏆 랭킹보기'; btn.onclick=()=>updateAndShowLeaderboard(elapsedMs); })
    .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
 }
-function submitGoogleForm(code, duration){
+function submitGoogleForm(code, duration, elapsedMs){
   const sid=($('#sid').value||'').trim(), nm=($('#snm').value||'').trim();
   const msg=$('#sheetMsg');
   if(!sid||!nm){ msg.style.color='var(--no)'; msg.textContent='학번과 이름을 모두 입력하세요.'; return; }
@@ -1571,41 +1589,81 @@ function submitGoogleForm(code, duration){
   fd.append(CONFIG.FORM_ENTRIES.code, code);
   fd.append(CONFIG.FORM_ENTRIES.duration, duration);
   fetch(formUrl, {method:'POST',mode:'no-cors',body:fd})
-   .then(()=>{ msg.style.color='var(--ok)'; msg.innerHTML='✅ 저장되었습니다. 이 화면을 선생님께 보여주세요.'; btn.textContent='제출 완료'; })
+   .then(()=>{ msg.style.color='var(--ok)'; msg.textContent='✅ 제출 완료되었습니다.'; btn.disabled=false; btn.textContent='🏆 랭킹보기'; btn.onclick=()=>updateAndShowLeaderboard(elapsedMs); })
    .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
+}
+function fmtDuration(ms){ return `${Math.floor(ms/60000)}분 ${Math.floor((ms%60000)/1000)}초`; }
+// 스프레드시트 제출용 학번: 설정 화면에서 이미 검증된 반·번호로 구성해 오타 없이 정확하게(학년+반+번호, 예 1학년 3반 5번→10305)
+function studentIdOf(classId, number){
+  const [g,c] = (classId||'1-1').split('-');
+  return `${g}${String(c).padStart(2,'0')}${String(number).padStart(2,'0')}`;
+}
+/* 전체 학급 통합 최고 기록 TOP5 + 내 순위: 완주 시각에 개인 최고기록(더 빠를 때만)을 갱신하고 전체를 다시 집계 */
+async function updateAndShowLeaderboard(elapsedMs){
+  const el=$('#leaderboard'); if(!el) return;
+  el.innerHTML=`<div class="fine" style="margin-top:14px">기록 불러오는 중…</div>`;
+  const closeBtn=`<button class="btn ghost" style="width:100%;margin-top:12px" onclick="location.reload()">닫기</button>`;
+  if(typeof firebase==='undefined'||!firebase.apps||firebase.apps.length===0){ el.innerHTML=closeBtn; return; }
+  try{
+    const db=firebase.database();
+    const key=`c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
+    const ref=db.ref('records/'+key);
+    const mySnap=await ref.once('value'); const prev=mySnap.val();
+    if(!prev || elapsedMs<prev.durationMs){
+      await ref.set({name:player.name,classId:player.classId,number:player.number,durationMs:elapsedMs,ts:Date.now()});
+    }
+    const allSnap=await db.ref('records').once('value');
+    const list=[]; allSnap.forEach(c=>{const v=c.val(); if(v&&typeof v.durationMs==='number')list.push(v);});
+    list.sort((a,b)=>a.durationMs-b.durationMs);
+    const top5=list.slice(0,5);
+    const myRank=list.findIndex(v=>v.classId===player.classId&&v.number===player.number)+1;
+    const medal=['🥇','🥈','🥉','4위','5위'];
+    const rows=top5.map((v,i)=>{
+      const mine=v.classId===player.classId&&v.number===player.number;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0${mine?';color:var(--gold);font-weight:bold':''}">
+        <span>${medal[i]} ${esc(v.name)}</span><span>${fmtDuration(v.durationMs)}</span></div>`;
+    }).join('');
+    el.innerHTML=`<div style="border-top:1px solid var(--gold-dim);margin-top:14px;padding-top:12px;text-align:left">
+      <div style="color:var(--gold);font-weight:bold;margin-bottom:6px;text-align:center">🏆 역대 최고 기록 TOP 5</div>
+      ${rows||'<div class="fine">아직 기록이 없습니다.</div>'}
+      ${myRank?`<div class="fine" style="margin-top:8px;text-align:center">전체 ${list.length}명 중 현재 <b>${myRank}위</b></div>`:''}
+    </div>${closeBtn}`;
+  }catch(e){ console.warn('리더보드 갱신 실패',e); el.innerHTML=`<div class="fine" style="margin-top:14px">기록을 불러오지 못했습니다.</div>${closeBtn}`; }
 }
 function win(){
   syncFirebase('win');
   const elapsedMs = Date.now() - (S.startTime || Date.now());
   document.body.classList.add('modal-open');
-  const elapsedMin = Math.floor(elapsedMs / 60000);
-  const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
-  const durationStr = `${elapsedMin}분 ${elapsedSec}초`;
+  const durationStr = fmtDuration(elapsedMs);
   localStorage.removeItem('hangeul_escape_save');
   localStorage.removeItem('hangeul_escape_origStart');
   const code=makeCode();
   $('#wintext').innerHTML=`네 개의 방을 모두 빠져나왔다!<br>1443 창제 · 1446 반포 · 1997 세계유산 등재 · 10월 9일 한글날.<br><b>${esc(player.name)}</b>, 너는 훈민정음의 길을 완주했다.<br>(소요 시간: <b>${durationStr}</b>)`;
-  $('#wincode').textContent=code;$('#wintime').textContent=new Date().toLocaleString('ko-KR')+' 완주';
+  $('#wintime').textContent=new Date().toLocaleString('ko-KR')+' 완주';
   const inpS="flex:1;min-width:0;font:inherit;font-size:1rem;color:var(--ink);background:#1d150c;border:1px solid #4a381f;border-radius:10px;padding:10px 12px";
+  const prefillSid = esc(studentIdOf(player.classId, player.number));
+  const prefillNm = esc(player.name||'');
   if(CONFIG.FORM_URL && CONFIG.FORM_ENTRIES.id){
     $('#winsubmit').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="sid" placeholder="학번" style="${inpS}" autocomplete="off" inputmode="numeric">
-        <input id="snm" placeholder="이름" value="${esc(player.name||'')}" style="${inpS}" autocomplete="off"></div>
+        <input id="sid" placeholder="학번" value="${prefillSid}" style="${inpS}" autocomplete="off" inputmode="numeric">
+        <input id="snm" placeholder="이름" value="${prefillNm}" style="${inpS}" autocomplete="off"></div>
       <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
       <div class="fine" id="sheetMsg"></div>`;
-    $('#sheetBtn').onclick=()=>submitGoogleForm(code, durationStr);
+    $('#sheetBtn').onclick=()=>submitGoogleForm(code, durationStr, elapsedMs);
   } else if(CONFIG.SHEET_URL){
     $('#winsubmit').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="sid" placeholder="학번" style="${inpS}" autocomplete="off" inputmode="numeric">
-        <input id="snm" placeholder="이름" value="${esc(player.name||'')}" style="${inpS}" autocomplete="off"></div>
+        <input id="sid" placeholder="학번" value="${prefillSid}" style="${inpS}" autocomplete="off" inputmode="numeric">
+        <input id="snm" placeholder="이름" value="${prefillNm}" style="${inpS}" autocomplete="off"></div>
       <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
       <div class="fine" id="sheetMsg"></div>`;
-    $('#sheetBtn').onclick=()=>submitSheet(code, durationStr);
+    $('#sheetBtn').onclick=()=>submitSheet(code, durationStr, elapsedMs);
   } else {
-    $('#winsubmit').innerHTML=`<div class="fine">완주 코드를 선생님께 보여주고 선물을 받으세요.</div>`;
+    // 제출 폼이 설정 안 된 경우엔 제출 절차가 없으니 랭킹보기 버튼만 바로 노출
+    $('#winsubmit').innerHTML=`<button class="btn ghost" id="rankOnlyBtn" style="width:100%">🏆 랭킹보기</button>`;
+    $('#rankOnlyBtn').onclick=()=>updateAndShowLeaderboard(elapsedMs);
   }
   $('#win').style.display='flex';
-  $('#copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(code);$('#copy').textContent='복사됨!';setTimeout(()=>$('#copy').textContent='코드 복사',1500);};}
+}
 
 /* ---------- 최소 자체 점검 ---------- */
 console.assert(norm(' 훈민 정음 ')==='훈민정음','normalize');
