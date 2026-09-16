@@ -190,9 +190,13 @@
 <div class="screen" id="setup"><div class="card">
   <h1>밀실의 문 앞에서</h1>
   <div style="display:flex;gap:8px;margin-bottom:8px">
-    <select class="fld" id="classIn" style="flex:1;margin:0">
-      <option value="">-- 반 선택 --</option>
+    <select class="fld" id="gradeIn" style="flex:1;margin:0">
+      <option value="">학년</option>
+      <option value="1">1학년</option>
+      <option value="2">2학년</option>
+      <option value="3">3학년</option>
     </select>
+    <input class="fld" id="classNumIn" type="number" min="1" max="10" placeholder="반" style="flex:1;margin:0" inputmode="numeric">
     <input class="fld" id="numIn" type="number" min="1" max="50" placeholder="번호" style="flex:1;margin:0" inputmode="numeric">
   </div>
   <input class="fld" id="nameIn" maxlength="4" placeholder="이름 (최대 4자)" style="margin-top:0">
@@ -591,31 +595,23 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
 
 /* ---------- 세팅 화면 ---------- */
 (function setupScreen(){
-  const clIn = $('#classIn');
-  if (clIn) {
-    for (let grade = 1; grade <= 3; grade++) {
-      for (let cls = 1; cls <= 10; cls++) {
-        const val = `${grade}-${cls}`;
-        const opt = document.createElement('option');
-        opt.value = val;
-        opt.textContent = `${grade}학년 ${cls}반`;
-        clIn.appendChild(opt);
-      }
-    }
-  }
   const sw=$('#swatches');
   SHIRTS.forEach((c,i)=>{const d=document.createElement('div');d.className='sw'+(i===0?' on':'');
     d.style.background='#'+c.toString(16).padStart(6,'0');
     d.onclick=()=>{document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));d.classList.add('on');player.shirt=c;};
     sw.appendChild(d);});
   $('#toIntro').onclick=()=>{
-    const classId = $('#classIn').value;
+    const grade = $('#gradeIn').value;
+    const classNum = parseInt($('#classNumIn').value, 10);
     const number = parseInt($('#numIn').value, 10);
     const name = $('#nameIn').value.trim();
 
-    if(!classId){ alert('학급(반)을 선택해주세요.'); return; }
+    if(!grade){ alert('학년을 선택해주세요.'); return; }
+    if(isNaN(classNum) || classNum < 1 || classNum > 10){ alert('반을 1~10 사이의 숫자로 입력해주세요.'); return; }
     if(isNaN(number) || number < 1 || number > 50){ alert('번호를 1~50 사이의 숫자로 입력해주세요.'); return; }
     if(!name){ alert('이름을 입력해주세요.'); return; }
+
+    const classId = `${grade}-${classNum}`;
 
     player.classId = classId;
     player.number = number;
