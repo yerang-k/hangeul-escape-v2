@@ -1246,7 +1246,7 @@ function netUpdate(dt){
   }
   for(const pid in net.avatars){ if(!seen[pid]){scene.remove(net.avatars[pid]);delete net.avatars[pid];} }
 }
-initNet();
+// initNet(); // 학생 화면에 다른 학생 캐릭터가 같이 보이는 기능은 방이 붐빌 때 혼란스러워서 껐음(대시보드에서는 계속 보임). net.ready가 계속 false로 남아 netPublish/netUpdate는 자동으로 아무 일도 안 함.
 
 /* 카메라(어깨 너머 시점 — 캐릭터가 바라보는 방향을 따라감) */
 let camYaw=Math.PI; const camTmp=new THREE.Vector3();
