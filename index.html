@@ -1382,7 +1382,7 @@ function animate(){
   if (!S.paused) {
     const distSq = Math.pow(hero.position.x - lastPos.x, 2) + Math.pow(hero.position.z - lastPos.z, 2);
     const nowTime = Date.now();
-    if (distSq > 0.02 && nowTime - lastPosSendTime >= 400) {
+    if (distSq > 0.02 && nowTime - lastPosSendTime >= 1000) {  // 위치 전송 1초 간격(쓰기 부하↓). 대시보드 칩 애니메이션도 1초로 맞춰 부드럽게 유지
       lastPosSendTime = nowTime;
       lastPos.x = hero.position.x;
       lastPos.z = hero.position.z;

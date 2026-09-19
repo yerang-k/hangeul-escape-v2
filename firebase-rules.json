@@ -1,0 +1,25 @@
+{
+  "rules": {
+    "//주석": "한글날 방탈출 보안 규칙 — Firebase 콘솔 > Realtime Database > 규칙 탭에 그대로 붙여넣고 '게시'",
+
+    ".read": false,
+    ".write": false,
+
+    "classes": {
+      "//": "교사 대시보드는 학년 노드를 실시간으로 읽고, 학생 게임은 자기 위치를 씀(무인증). 실시간 위치·이름이라 삭제/조작돼도 상품과 무관 — 행사 끝나면 통째로 지울 것.",
+      "$grade": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "records": {
+      "//": "순위 기록. 아무나 읽기는 가능(리더보드·집계용)하되, 아래 write 규칙이 삭제·조작을 막는다.",
+      ".read": true,
+      "$key": {
+        ".write": "newData.exists() && (!data.exists() || newData.child('durationMs').val() <= data.child('durationMs').val())",
+        ".validate": "newData.hasChildren(['name','classId','number','durationMs','ts']) && newData.child('durationMs').isNumber() && newData.child('durationMs').val() >= 60000 && newData.child('durationMs').val() <= 5400000 && newData.child('name').isString() && newData.child('name').val().length <= 8"
+      }
+    }
+  }
+}
