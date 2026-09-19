@@ -600,6 +600,11 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     d.style.background='#'+c.toString(16).padStart(6,'0');
     d.onclick=()=>{document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));d.classList.add('on');player.shirt=c;};
     sw.appendChild(d);});
+  // 학년별 QR: 주소에 ?grade=1/2/3 이 있으면 학년을 자동 선택하고 잠근다(학생이 못 바꿈)
+  const qGrade = new URLSearchParams(location.search).get('grade');
+  if(qGrade && ['1','2','3'].indexOf(qGrade) >= 0){
+    const gi=$('#gradeIn'); gi.value=qGrade; gi.disabled=true; gi.style.opacity='0.7';
+  }
   $('#toIntro').onclick=()=>{
     const grade = $('#gradeIn').value;
     const classNum = parseInt($('#classNumIn').value, 10);
