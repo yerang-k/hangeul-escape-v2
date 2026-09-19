@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한글날 방탈출 — 학년별 입장 QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;margin:0;background:#f4f1ea;color:#241a10}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 18px}
+  h1{font-size:1.4rem;text-align:center;margin:.2em 0}
+  .desc{text-align:center;color:#6b5d42;font-size:.9rem;margin-bottom:16px;line-height:1.6}
+  .controls{background:#fff;border:1px solid #d8cdb5;border-radius:12px;padding:16px;margin-bottom:20px}
+  .controls label{display:block;font-weight:bold;margin-bottom:6px;font-size:.95rem}
+  .controls input{width:100%;box-sizing:border-box;font-size:1rem;padding:10px 12px;border:1px solid #c8bba6;border-radius:8px}
+  .hint{color:#8a7a58;font-size:.82rem;margin-top:8px;line-height:1.5}
+  .cards{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
+  .card{background:#fff;border:2px solid #241a10;border-radius:16px;padding:20px 18px;width:250px;text-align:center;box-sizing:border-box}
+  .card .grade{font-size:1.5rem;font-weight:800;color:#c0553f}
+  .card .venue{font-size:1rem;color:#6b5d42;margin-bottom:12px}
+  .card .qr{display:flex;justify-content:center;margin:6px 0 10px}
+  .card .qr img,.card .qr canvas{width:200px !important;height:200px !important}
+  .card .url{font-size:.68rem;color:#8a7a58;word-break:break-all;margin-top:6px}
+  .card .tip{font-size:.8rem;color:#241a10;margin-top:10px;font-weight:bold}
+  .printbtn{display:block;margin:22px auto 0;font-size:1.05rem;padding:12px 28px;background:#241a10;color:#e0b357;border:none;border-radius:10px;cursor:pointer}
+  .err{color:#c0392b;text-align:center;margin-top:10px}
+  @media print{
+    body{background:#fff}
+    .controls,.printbtn,.desc,h1{display:none}
+    .wrap{max-width:none;padding:0}
+    .cards{gap:0}
+    .card{width:33%;border:none;page-break-inside:avoid}
+    .card .qr img,.card .qr canvas{width:230px !important;height:230px !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎉 한글날 방탈출 — 학년별 입장 QR</h1>
+  <div class="desc">게임 주소만 붙여넣으면 학년별 QR 3장이 만들어집니다.<br>각 QR은 해당 학년으로 <b>자동 설정</b>되어 입장합니다(학생이 학년을 못 바꿈).</div>
+
+  <div class="controls">
+    <label for="base">게임 기본 주소 (학생들이 여는 그 주소)</label>
+    <input id="base" type="text" placeholder="예: https://yerang-k.github.io/hangeul-escape-v2/  또는  .../index.html" autocomplete="off">
+    <div class="hint">
+      ※ 지금 학생들에게 나눠주는 게임 링크를 그대로 붙여넣으세요. <code>?grade=</code> 같은 건 붙이지 말고 순수 주소만.<br>
+      붙여넣으면 아래 3장이 자동으로 갱신됩니다.
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+  <button class="printbtn" onclick="window.print()">🖨️ QR 3장 인쇄하기</button>
+</div>
+
+<script>
+var VENUE = { '1':'시청각실', '2':'대회의실', '3':'수학전용실' };
+var base = document.getElementById('base');
+var cards = document.getElementById('cards');
+var err = document.getElementById('err');
+
+// 기본 주소에 ?grade=N 을 안전하게 붙이기
+function withGrade(url, g){
+  try{
+    var u = new URL(url);
+    u.searchParams.set('grade', g);
+    return u.toString();
+  }catch(e){
+    // URL 파싱 실패 시 단순 결합(프로토콜 빠뜨린 경우 등)
+    var sep = url.indexOf('?') >= 0 ? '&' : '?';
+    return url + sep + 'grade=' + g;
+  }
+}
+
+function render(){
+  var url = base.value.trim();
+  cards.innerHTML = '';
+  err.textContent = '';
+  try{ localStorage.setItem('hangeul_qr_base', url); }catch(e){}
+  if(!url){ return; }
+  if(!/^https?:\/\//i.test(url)){
+    err.textContent = '주소는 http:// 또는 https:// 로 시작해야 합니다.';
+    return;
+  }
+  ['1','2','3'].forEach(function(g){
+    var full = withGrade(url, g);
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="grade">' + g + '학년</div>' +
+      '<div class="venue">' + (VENUE[g]||'') + '</div>' +
+      '<div class="qr"></div>' +
+      '<div class="tip">' + g + '학년만 이 QR로 입장</div>' +
+      '<div class="url">' + full + '</div>';
+    cards.appendChild(card);
+    new QRCode(card.querySelector('.qr'), { text: full, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+  });
+}
+
+base.addEventListener('input', render);
+// 이전에 입력한 주소 기억
+try{ var saved = localStorage.getItem('hangeul_qr_base'); if(saved){ base.value = saved; } }catch(e){}
+render();
+</script>
+</body>
+</html>
