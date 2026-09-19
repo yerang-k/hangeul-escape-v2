@@ -1618,20 +1618,22 @@ async function updateAndShowLeaderboard(elapsedMs){
       await ref.set({name:player.name,classId:player.classId,number:player.number,durationMs:elapsedMs,ts:Date.now()});
     }
     const allSnap=await db.ref('records').once('value');
-    const list=[]; allSnap.forEach(c=>{const v=c.val(); if(v&&typeof v.durationMs==='number')list.push(v);});
+    // 상품 기준과 동일하게 '본인 학년' 안에서만 순위 집계(학년별 TOP 10)
+    const myGrade=String(player.classId).split('-')[0];
+    const list=[]; allSnap.forEach(c=>{const v=c.val(); if(v&&typeof v.durationMs==='number'&&String(v.classId).split('-')[0]===myGrade)list.push(v);});
     list.sort((a,b)=>a.durationMs-b.durationMs);
-    const top5=list.slice(0,5);
+    const top10=list.slice(0,10);
     const myRank=list.findIndex(v=>v.classId===player.classId&&v.number===player.number)+1;
-    const medal=['🥇','🥈','🥉','4위','5위'];
-    const rows=top5.map((v,i)=>{
+    const rankLabel=i=>i<3?['🥇','🥈','🥉'][i]:(i+1)+'위';
+    const rows=top10.map((v,i)=>{
       const mine=v.classId===player.classId&&v.number===player.number;
       return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0${mine?';color:var(--gold);font-weight:bold':''}">
-        <span>${medal[i]} ${esc(v.name)}</span><span>${fmtDuration(v.durationMs)}</span></div>`;
+        <span>${rankLabel(i)} ${esc(v.name)}</span><span>${fmtDuration(v.durationMs)}</span></div>`;
     }).join('');
     el.innerHTML=`<div style="border-top:1px solid var(--gold-dim);margin-top:14px;padding-top:12px;text-align:left">
-      <div style="color:var(--gold);font-weight:bold;margin-bottom:6px;text-align:center">🏆 역대 최고 기록 TOP 5</div>
+      <div style="color:var(--gold);font-weight:bold;margin-bottom:6px;text-align:center">🏆 ${myGrade}학년 순위 TOP 10</div>
       ${rows||'<div class="fine">아직 기록이 없습니다.</div>'}
-      ${myRank?`<div class="fine" style="margin-top:8px;text-align:center">전체 ${list.length}명 중 현재 <b>${myRank}위</b></div>`:''}
+      ${myRank?`<div class="fine" style="margin-top:8px;text-align:center">${myGrade}학년 ${list.length}명 중 현재 <b>${myRank}위</b></div>`:''}
     </div>${closeBtn}`;
   }catch(e){ console.warn('리더보드 갱신 실패',e); el.innerHTML=`<div class="fine" style="margin-top:14px">기록을 불러오지 못했습니다.</div>${closeBtn}`; }
 }
