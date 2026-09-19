@@ -16,88 +16,71 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+    @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&display=swap');
     body {
       font-family: 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif;
-      font-weight: 700; /* 교실 뒤에서도 보이도록 기본 굵기 상향 */
-      background-color: #f7f3ed; /* 포근하고 밝은 전통 한지 톤 배경 */
-      color: #2b221a; /* 짙은 먹색 텍스트 */
+      font-weight: 400; /* 기본은 얇게 — 강조는 필요한 곳(제목·이름·수치)만 */
+      background-color: #faf9f7; /* 웜 뉴트럴 베이스 */
+      color: #1f1c18;
+      font-variant-numeric: tabular-nums;
       transition: background-color .2s, color .2s;
     }
     .dark body {
-      background-color: #1c1712; /* 어두운 밤 한지 톤 */
-      color: #e8ddd0;
+      background-color: #141210; /* 웜 잉크블랙 */
+      color: #ece7df;
     }
-    .myeongjo {
-      font-family: inherit; /* 궁서체/바탕체 느낌의 명조체 제거, 시인성 위해 본문과 동일한 산세리프 유지 */
-    }
-    :root {
-      --pulse-bg-a: rgba(254, 226, 226, 0.6);
-      --pulse-bg-b: rgba(254, 226, 226, 1);
-    }
-    .dark {
-      --pulse-bg-a: rgba(120, 30, 30, 0.55);
-      --pulse-bg-b: rgba(160, 40, 40, 0.9);
-    }
-    .stagnant-pulse {
-      animation: borderPulse 1.2s infinite alternate;
-    }
-    @keyframes borderPulse {
-      0% {
-        border-color: #c62828;
-        box-shadow: 0 0 4px rgba(198, 40, 40, 0.4);
-        background-color: var(--pulse-bg-a);
-      }
-      100% {
-        border-color: #ef4444;
-        box-shadow: 0 0 16px rgba(239, 68, 68, 0.85);
-        background-color: var(--pulse-bg-b);
-      }
-    }
+    /* 전통 한 끗: 제목·완주명단 제목에만 명조체 */
+    .serif { font-family: 'Nanum Myeongjo', 'Pretendard', serif; }
+    .myeongjo { font-family: inherit; } /* 나머지는 산세리프 유지(시인성) */
+    /* 정체(경보)는 카드 전체를 붉게 칠하지 않고, 작은 점만 조용히 점멸 */
+    .stagnant-dot { animation: dotPulse 1.4s infinite alternate; }
+    @keyframes dotPulse { 0% { opacity: .35; } 100% { opacity: 1; } }
     .student-chip {
-      transition: left 1s linear, top 1s linear;
+      transition: left 1s cubic-bezier(.4,0,.2,1), top 1s cubic-bezier(.4,0,.2,1);
     }
-    .no-transition {
-      transition: none !important;
+    .no-transition { transition: none !important; }
+    /* 이동 캐릭터 이름표: 검정 외곽선 대신 반투명 알약 */
+    .name-pill {
+      background: rgba(28,24,18,.62); color: #fff;
+      padding: 1px 7px; border-radius: 999px; font-weight: 600;
+      -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
     }
     @keyframes stagnantGlow {
-      0% { filter: drop-shadow(0 0 2px #d32f2f); }
-      100% { filter: drop-shadow(0 0 7px #d32f2f); }
+      0% { filter: drop-shadow(0 0 1px #d9694c); }
+      100% { filter: drop-shadow(0 0 6px #d9694c); }
     }
-    .char-stagnant {
-      animation: stagnantGlow 0.9s infinite alternate;
-    }
+    .char-stagnant { animation: stagnantGlow 0.9s infinite alternate; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
   </style>
 </head>
 <body class="p-4 md:p-6 max-w-[1600px] mx-auto transition-all duration-300">
   <!-- 상단 헤더 (전통 베이지톤 테마) -->
-  <header class="flex flex-col md:flex-row justify-between items-center border-b border-[#dfd5c6] dark:border-[#4a4034] pb-4 mb-6 gap-4">
-    <div class="flex items-center gap-3">
-      <span class="text-4xl">👨‍🏫</span>
-      <div>
-        <h1 class="text-4xl font-extrabold text-[#3d2b1a] dark:text-[#e8c9a0] myeongjo tracking-tight">한글날 방탈출</h1>
-        <p class="text-sm text-[#a67c52] dark:text-[#c9a06a] font-bold">실시간 학급별 조감도 모니터링 대시보드</p>
-      </div>
+  <header class="flex flex-col md:flex-row justify-between items-center md:items-end border-b border-[#e9e6e0] dark:border-[#2c2924] pb-4 mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-[#22201c] dark:text-[#ece7df] serif tracking-tight inline-block relative pb-1">한글날 방탈출
+        <span class="absolute left-0 bottom-0 h-[3px] w-3/5 rounded bg-[#8a4a3d] dark:bg-[#d99a86] opacity-90"></span>
+      </h1>
+      <p class="text-[13px] text-[#8f8a80] mt-2">실시간 학급별 조감도 모니터링 대시보드</p>
     </div>
-    
+
     <!-- 반 선택 드롭다운 및 토글 -->
-    <div class="flex items-center gap-3">
-      <label for="classSelect" class="text-sm font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo">특별실 선택:</label>
-      <select id="classSelect" class="bg-white dark:bg-[#2a2319] border-2 border-[#dfd5c6] dark:border-[#4a4034] text-[#5c4033] dark:text-[#e8ddd0] font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#8c6239] dark:focus:border-[#c9a06a] shadow-sm">
+    <div class="flex items-center gap-2 flex-wrap">
+      <select id="classSelect" aria-label="특별실 선택" class="bg-white dark:bg-[#1c1a17] border border-[#e9e6e0] dark:border-[#2c2924] text-[#22201c] dark:text-[#ece7df] font-medium text-[13px] rounded-lg px-3 py-2 focus:outline-none focus:border-[#8a4a3d] dark:focus:border-[#d99a86]">
       </select>
-      
+
       <!-- 다크모드 토글 버튼 -->
-      <button id="themeToggleBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] dark:bg-[#3a3225] dark:hover:bg-[#463c2c] border border-[#dfd5c6] dark:border-[#4a4034] text-[#5c4033] dark:text-[#e8ddd0] font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+      <button id="themeToggleBtn" class="bg-white dark:bg-[#1c1a17] hover:border-[#8f8a80] border border-[#e9e6e0] dark:border-[#2c2924] text-[#5c574e] dark:text-[#b7b1a6] text-[13px] px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">
         <span id="themeIcon">🌙</span> <span id="themeText">다크모드</span>
       </button>
 
       <!-- 리스트뷰 토글 버튼 -->
-      <button id="toggleListBtn" class="bg-[#f0e6d6] hover:bg-[#e8dbcc] border border-[#dfd5c6] text-[#5c4033] font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
-        <span>📋</span> <span id="toggleText">현황판 접기</span>
+      <button id="toggleListBtn" class="bg-white dark:bg-[#1c1a17] hover:border-[#8f8a80] border border-[#e9e6e0] dark:border-[#2c2924] text-[#5c574e] dark:text-[#b7b1a6] text-[13px] px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">
+        <span id="toggleText">현황판 접기</span>
       </button>
-      
+
       <!-- 학급 초기화 버튼 -->
-      <button id="clearDataBtn" class="bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 font-bold text-sm px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
-        <span>🧹</span> <span>학급 초기화</span>
+      <button id="clearDataBtn" class="bg-white dark:bg-[#1c1a17] hover:border-[#d9694c] border border-[#e9e6e0] dark:border-[#2c2924] text-[#d9694c] text-[13px] px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">
+        학급 초기화
       </button>
     </div>
   </header>
@@ -106,56 +89,53 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 transition-all duration-300" id="mainGrid">
     <!-- 실시간 공간 조감도 뷰 (2열 또는 3열 전체 차지) -->
     <section class="lg:col-span-2 space-y-6 transition-all duration-300" id="mapSection">
-      <div class="bg-white dark:bg-[#241e15] border border-[#dfd5c6] dark:border-[#4a4034] rounded-xl p-5 shadow-lg">
-        <h2 class="text-xl font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo mb-4 flex items-center justify-between">
-          <span>🗺️ 실시간 2D 조감도 미니맵</span>
-          <span class="text-sm text-stone-500 dark:text-stone-400 font-normal">* 가구 및 장애물 실제 좌표 1:1 매핑 완료</span>
+      <div class="bg-white dark:bg-[#1c1a17] border border-[#e9e6e0] dark:border-[#2c2924] rounded-xl p-4 md:p-5">
+        <h2 class="text-[15px] font-bold text-[#22201c] dark:text-[#ece7df] mb-4 flex items-center justify-between">
+          <span>실시간 2D 조감도</span>
         </h2>
-        
+
         <!-- 4개 방 조감도 그리드 (2x2) -->
-        <div class="grid grid-cols-2 gap-5" id="roomMapsGrid">
+        <div class="grid grid-cols-2 gap-4" id="roomMapsGrid">
           <!-- 스크립트에서 각 방의 조감도가 생성됩니다. -->
         </div>
 
-        <!-- 최종 완주 성공 구역 (에메랄드 톤 포인트) -->
-        <div class="mt-6 border-t border-[#dfd5c6] pt-4">
-          <h3 class="text-sm font-bold text-emerald-700 dark:text-emerald-400 myeongjo mb-3 flex items-center gap-1.5">
-            <span>🎉</span> 최종 탈출 성공 명단
-          </h3>
-          <div class="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-xl p-4 flex flex-wrap gap-2 min-h-[60px]" id="winRoomArea">
-            <div class="text-stone-400 dark:text-stone-500 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>
+        <!-- 최종 완주 성공 구역 -->
+        <div class="mt-5 border-t border-[#e9e6e0] dark:border-[#2c2924] pt-4">
+          <h3 class="text-[14px] font-bold text-[#22201c] dark:text-[#ece7df] serif mb-3">최종 탈출 성공 명단</h3>
+          <div class="flex flex-wrap gap-2 min-h-[44px]" id="winRoomArea">
+            <div class="text-[#8f8a80] text-sm my-auto">아직 완주한 학생이 없습니다.</div>
           </div>
         </div>
       </div>
-      
+
       <!-- 요약 정보 / 범례 -->
-      <div class="bg-white/60 dark:bg-black/20 border border-[#dfd5c6]/60 dark:border-[#4a4034]/60 rounded-xl p-4 flex flex-wrap gap-5 text-sm text-stone-600 dark:text-stone-300">
+      <div class="border-t border-[#e9e6e0] dark:border-[#2c2924] pt-3.5 flex flex-wrap gap-4 items-center text-[12px] text-[#5c574e] dark:text-[#b7b1a6]">
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-blue-600 rounded-full"></span>
-          <span>진행 중 학생</span>
+          <span class="inline-block w-2.5 h-2.5 bg-[#4f6bed] dark:bg-[#8098f5] rounded-full"></span>
+          <span>진행 중</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-red-600 rounded-full stagnant-pulse"></span>
-          <span>3분 이상 정체 (교사 확인 요망)</span>
+          <span class="inline-block w-2.5 h-2.5 bg-[#d9694c] dark:bg-[#f0836a] rounded-full stagnant-dot"></span>
+          <span>3분 이상 정체 (확인 요망)</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="inline-block w-3.5 h-3.5 bg-emerald-600 rounded"></span>
-          <span>최종 완주자</span>
+          <span class="inline-block w-2.5 h-2.5 bg-[#3f9e7c] dark:bg-[#5fbf98] rounded-full"></span>
+          <span>최종 완주</span>
         </div>
-        <div class="ml-auto text-stone-500 dark:text-stone-400 font-bold">
-          * 학생의 실제 이동에 맞추어 이름 칩이 동적으로 미끄러지며 이동합니다.
+        <div class="ml-auto text-[#8f8a80]">
+          캐릭터는 학생 실제 이동에 맞춰 미끄러지듯 움직입니다
         </div>
       </div>
     </section>
 
     <!-- 학생 전체 리스트 뷰 (1열 차지) -->
-    <section class="bg-white dark:bg-[#241e15] border border-[#dfd5c6] dark:border-[#4a4034] rounded-xl p-5 shadow-lg transition-all duration-300" id="listSection">
-      <h2 class="text-xl font-bold text-[#8c6239] dark:text-[#c9a06a] myeongjo mb-4 flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2">
-        <span class="flex items-center gap-2">📋 전체 현황판 (리스트 뷰)</span>
-        <span id="studentCount" class="text-sm bg-[#fbf9f6] dark:bg-[#2a2319] border border-[#dfd5c6] dark:border-[#4a4034] px-2.5 py-1 rounded-md text-[#8c6239] dark:text-[#c9a06a] font-bold">0명 참여 중</span>
+    <section class="bg-white dark:bg-[#1c1a17] border border-[#e9e6e0] dark:border-[#2c2924] rounded-xl p-4 md:p-5 transition-all duration-300" id="listSection">
+      <h2 class="text-[15px] font-bold text-[#22201c] dark:text-[#ece7df] mb-4 flex items-center justify-between border-b border-[#efece6] dark:border-[#26231f] pb-3">
+        <span>전체 현황판</span>
+        <span id="studentCount" class="text-[12px] font-medium bg-[#f5f3ef] dark:bg-[#211e1a] border border-[#e9e6e0] dark:border-[#2c2924] px-2.5 py-1 rounded-full text-[#5c574e] dark:text-[#b7b1a6]">0명 참여 중</span>
       </h2>
-      
-      <div class="space-y-3 overflow-y-auto max-h-[75vh] pr-2" id="studentList">
+
+      <div class="space-y-2 overflow-y-auto max-h-[75vh] pr-1" id="studentList">
       </div>
     </section>
   </div>
@@ -337,18 +317,17 @@
       for (let i = 0; i < 4; i++) {
         mapsHTML += `
           <div class="flex flex-col items-center gap-1.5">
-            <!-- 방 라벨 (박스 밖, 가운데 정렬, 고가독성) -->
-            <div class="text-base md:text-lg font-black text-[#5c4033] dark:text-[#d9b98a] myeongjo tracking-wide text-center">
-              ${ROOM_NAMES[i]}
+            <!-- 방 라벨 (박스 밖, 가운데 정렬) -->
+            <div class="text-[13px] font-semibold text-[#22201c] dark:text-[#ece7df] text-center flex items-baseline gap-1.5 justify-center">
+              <span class="text-[11px] font-bold text-[#8a4a3d] dark:text-[#d99a86]">제${i+1}방</span>
+              <span>${ROOM_NAMES[i].replace(/^제\d방\s*\(([^)]+)\)$/, '$1')}</span>
             </div>
-            <div class="relative bg-[#fcfbfa] dark:bg-[#241e15] border-[5px] border-[#5c4033] dark:border-[#c9a06a] rounded-xl overflow-hidden aspect-square flex flex-col p-2 select-none shadow-md w-full" id="roomMapBox_${i}">
-            <!-- 3D 좌표 보조선 -->
-            <div class="absolute inset-0 border border-dashed border-[#f2eae1] dark:border-white/10 pointer-events-none z-0"></div>
-            
-            <!-- 1) 고체 장애물 벽 (선명한 그레이톤으로 톤업) -->
+            <div class="relative bg-[#f4f2ee] dark:bg-[#191713] border border-[#e9e6e0] dark:border-[#2c2924] rounded-lg overflow-hidden aspect-square flex flex-col p-2 select-none w-full" id="roomMapBox_${i}">
+
+            <!-- 1) 고체 장애물 벽 (저채도 뉴트럴) -->
             <div class="absolute inset-0 pointer-events-none z-0">
         `;
-        
+
         const blocks = ROOM_BLOCKS[i] || [];
         blocks.forEach(b => {
           const left = ((b.x - b.w/2 + 16) / 32) * 100;
@@ -356,7 +335,7 @@
           const width = (b.w / 32) * 100;
           const height = (b.d / 32) * 100;
           mapsHTML += `
-            <div class="absolute bg-[#e2d8ce] dark:bg-[#3a3225] border border-[#c8bba6] dark:border-[#4a4034] rounded shadow-sm" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
+            <div class="absolute bg-[#e7e3db] dark:bg-[#26231e] rounded-md" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%"></div>
           `;
         });
         
@@ -374,21 +353,21 @@
           const width = (f.w / 32) * 100;
           const height = (f.d / 32) * 100;
           
-          let styleClass = "bg-[#8c6239] border border-[#6b4725] rounded shadow-sm";
+          let styleClass = "bg-[#e3ddd2] dark:bg-[#2a2620] rounded-md";   // 서안·궤 등
           if (f.build === 'jar') {
-            styleClass = "bg-[#a67c52] border border-[#7f5c38] rounded-full shadow-sm";
+            styleClass = "bg-[#e3ddd2] dark:bg-[#2a2620] rounded-full";
           } else if (f.build === 'scroll') {
-            styleClass = "bg-[#bca693] border border-[#9a826e] shadow-sm";
+            styleClass = "bg-[#e7e3db] dark:bg-[#26231e] rounded-sm";
           } else if (f.build === 'npc') {
-            styleClass = "bg-[#2e7d32] border border-[#1b5e20] rounded-full shadow-sm";
+            styleClass = "bg-[#dbe7e0] dark:bg-[#20302a] rounded-full";   // 저채도 청록 — NPC 식별
           } else if (f.build === 'door') {
-            styleClass = "bg-[#c62828] border border-[#b71c1c] rounded shadow-sm";
+            styleClass = "bg-[#eed8d2] dark:bg-[#33231f] rounded-md";     // 저채도 벽돌빛 — 출구 식별
           }
 
           mapsHTML += `
             <div class="absolute ${styleClass}" style="left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%">
-              <!-- 라벨은 가구 칸 크기에 눌려 잘리지 않도록, 칸 밖으로 넘쳐도 되는 별도 오버레이로 -->
-              <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] md:text-[11px] font-black leading-none whitespace-nowrap text-white px-0.5" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 4px rgba(0,0,0,.6)">${f.name}</span>
+              <!-- 라벨: 검정 외곽선 대신 옅은 알약 배경으로 깔끔하게 -->
+              <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] md:text-[10px] font-medium leading-none whitespace-nowrap text-[#6b655c] dark:text-[#a49c8d] px-1 py-0.5 rounded bg-[#faf9f7]/85 dark:bg-[#141210]/70">${f.name}</span>
             </div>
           `;
         });
@@ -455,8 +434,8 @@
     }
     
     function renderError(msg) {
-      studentList.innerHTML = `<div class="text-red-600 text-sm p-4 text-center border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 rounded-lg">${msg}</div>`;
-      roomMapsGrid.innerHTML = `<div class="col-span-2 text-stone-500 dark:text-stone-400 text-sm text-center p-8 border border-[#e8dbcc] dark:border-[#3d3528] bg-white dark:bg-[#241e15] rounded-xl">데이터를 불러올 수 없습니다.</div>`;
+      studentList.innerHTML = `<div class="text-[#d9694c] text-sm p-4 text-center border border-[#e9d3cb] dark:border-[#4a2f28] bg-[#fbeee9] dark:bg-[#2a1a15] rounded-lg">${msg}</div>`;
+      roomMapsGrid.innerHTML = `<div class="col-span-2 text-[#8f8a80] text-sm text-center p-8 border border-[#e9e6e0] dark:border-[#2c2924] bg-white dark:bg-[#1c1a17] rounded-xl">데이터를 불러올 수 없습니다.</div>`;
     }
     
     // 게임 3D 한복 캐릭터(buildAvatar)를 2D 미니맵용으로 단순화: 저고리(크림)+치마(학생 선택색)+고름/버선(고동)
@@ -508,37 +487,35 @@
         // 1) 리스트 뷰 카드 (밝은 웜그레이 톤 고대비 리폼)
         const timeStr = new Date(lastActive).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const minutesAgo = Math.floor(idleTimeMs / 60000);
-        const idleWarning = isStagnant ? `<span class="text-sm text-red-600 font-bold animate-pulse">⚠️ ${minutesAgo}분 지체</span>` : '';
-        
-        let cardClass = "bg-[#fbf9f6] dark:bg-[#2a2319] border border-[#dfd5c6] dark:border-[#4a4034] p-3.5 rounded-lg shadow-sm";
-        if (isFinished) {
-          cardClass = "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 p-3.5 rounded-lg shadow-sm";
-        } else if (isStagnant) {
-          cardClass = "bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 p-3.5 rounded-lg stagnant-pulse";
-        }
-        
+        const idleWarning = isStagnant ? `<span class="text-[12px] text-[#d9694c] font-semibold">${minutesAgo}분 지체</span>` : '';
+
+        // 카드: 흰 바탕 + 1px 테두리 + 좌측 4px 상태 스트라이프(진행/정체/완주)
+        const stripe = isFinished ? 'border-l-[#3f9e7c] dark:border-l-[#5fbf98]' : (isStagnant ? 'border-l-[#d9694c] dark:border-l-[#f0836a]' : 'border-l-[#4f6bed] dark:border-l-[#8098f5]');
+        const pctColor = isFinished ? 'text-[#3f9e7c] dark:text-[#5fbf98]' : (isStagnant ? 'text-[#d9694c] dark:text-[#f0836a]' : 'text-[#4f6bed] dark:text-[#8098f5]');
+        const barColor = isFinished ? 'bg-[#3f9e7c]' : (isStagnant ? 'bg-[#d9694c]' : 'bg-[#4f6bed]');
+
         listHTML += `
-          <div class="${cardClass}">
-            <div class="flex justify-between items-start mb-1">
-              <div class="flex items-center gap-1.5">
-                <span class="text-stone-500 dark:text-stone-400 font-mono text-sm font-bold">${esc(st.classId || '')} ${st.number}번</span>
-                <span class="font-extrabold text-stone-800 text-sm">${esc(st.name)}</span>
+          <div class="bg-white dark:bg-[#1c1a17] border border-[#e9e6e0] dark:border-[#2c2924] border-l-4 ${stripe} p-3 rounded-lg">
+            <div class="flex justify-between items-center gap-2">
+              <div class="flex items-baseline gap-2 min-w-0">
+                <span class="text-[#8f8a80] font-mono text-[12px]">${esc(st.classId || '')} ${st.number}번</span>
+                <span class="font-semibold text-[#22201c] dark:text-[#ece7df] text-[14px] truncate">${esc(st.name)}</span>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm ${isFinished ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-blue-700 dark:text-blue-400 font-extrabold'}">${st.progressRate}%</span>
-                <button onclick="removeStudent('${st._key}')" class="text-[#bca693] dark:text-[#8a7455] hover:text-red-600 dark:hover:text-red-400 text-sm font-bold cursor-pointer transition-colors" title="이 학생 삭제">❌</button>
+              <div class="flex items-center gap-2 flex-none">
+                <span class="text-[14px] font-bold ${pctColor}">${st.progressRate}%</span>
+                <button onclick="removeStudent('${st._key}')" class="text-[#c4bfb5] dark:text-[#6f6a5f] hover:text-[#d9694c] text-[13px] cursor-pointer transition-colors leading-none" title="이 학생 삭제">✕</button>
               </div>
             </div>
-            
-            <div class="w-full bg-[#eee7de] dark:bg-[#3a3225] rounded-full h-1.5 mb-2 overflow-hidden shadow-inner">
-              <div class="h-1.5 rounded-full ${isFinished ? 'bg-emerald-600' : 'bg-blue-600'}" style="width: ${st.progressRate}%"></div>
+
+            <div class="w-full bg-[#f0eee9] dark:bg-white/10 rounded-full h-[5px] my-2 overflow-hidden">
+              <div class="h-full rounded-full ${barColor}" style="width: ${st.progressRate}%"></div>
             </div>
-            
-            <div class="flex justify-between items-center text-sm text-stone-600 dark:text-stone-400 font-bold">
-              <span class="truncate max-w-[140px]">${isFinished ? '최종 완주성공!' : esc(st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
-              <span class="text-[12px] text-stone-500 dark:text-stone-400">${timeStr} ${idleWarning}</span>
+
+            <div class="flex justify-between items-center gap-2 text-[12px]">
+              <span class="text-[#5c574e] dark:text-[#b7b1a6] truncate max-w-[150px]">${isFinished ? '최종 탈출 성공!' : esc(st.currentRoomName || ROOM_NAMES[roomIdx])}</span>
+              <span class="flex items-center gap-1.5 flex-none"><span class="text-[#8f8a80]">${timeStr}</span>${idleWarning}${isStagnant ? '<span class="inline-block w-[6px] h-[6px] rounded-full bg-[#d9694c] stagnant-dot"></span>' : ''}</span>
             </div>
-            <div class="text-[13px] text-amber-800 dark:text-amber-400 font-bold mt-0.5 truncate">${esc(st.currentStep || '')}</div>
+            ${st.currentStep ? `<div class="text-[12px] text-[#8a4a3d] dark:text-[#d99a86] mt-1 truncate">${esc(st.currentStep)}</div>` : ''}
           </div>
         `;
         
@@ -546,10 +523,10 @@
         if (isFinished) {
           hasWin = true;
           winHTML += `
-            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-400 dark:border-emerald-600 text-emerald-800 font-bold shadow">
-              <span class="font-mono text-[12px] bg-white/60 dark:bg-black/30 px-1 rounded border border-emerald-200 dark:border-emerald-700">${esc(st.classId || '')} ${st.number}번</span>
-              <span>${esc(st.name)}</span>
-              <span class="text-[12px] opacity-75 font-normal">(${timeStr})</span>
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] bg-[#eaf5f0] dark:bg-[#1e2f28] border border-[#cbe6db] dark:border-[#2c4a3e]">
+              <span class="font-mono text-[11px] text-[#3f9e7c] dark:text-[#5fbf98]">${esc(st.classId || '')} ${st.number}번</span>
+              <span class="font-semibold text-[#22201c] dark:text-[#ece7df]">${esc(st.name)}</span>
+              <span class="text-[11px] text-[#8f8a80]">${timeStr}</span>
             </div>
           `;
 
@@ -578,12 +555,11 @@
 
           // 게임 속 한복 캐릭터를 그대로 미니맵에 재현: 학생이 고른 치마 색 반영, 이름은 머리 위에 떠서 이동.
           const skirtColor = safeColor(st.color) || CHAR_COLORS[(st.number + (st.classId || '').length) % CHAR_COLORS.length];
-          const nameClass = isStagnant ? 'text-red-500' : 'text-[#fff3d6]';
           const safeTitle = esc(`${st.classId || ''} ${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}`);
 
           chip.innerHTML = `
             <div class="flex flex-col items-center cursor-help" title="${safeTitle}">
-              <div class="text-[10px] font-black leading-none whitespace-nowrap mb-0.5 ${nameClass}" style="text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px rgba(0,0,0,.7)">${esc(st.name)}</div>
+              <div class="name-pill text-[10px] leading-none whitespace-nowrap mb-1">${esc(st.name)}</div>
               ${hanbokSVG(skirtColor, isStagnant)}
             </div>
           `;
