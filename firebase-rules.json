@@ -1,20 +1,22 @@
 {
   "rules": {
-    "//주석": "한글날 방탈출 보안 규칙 — Firebase 콘솔 > Realtime Database > 규칙 탭에 그대로 붙여넣고 '게시'",
+    // 한글날 방탈출 보안 규칙 — Realtime Database > 규칙(Rules) 탭에 통째로 붙여넣고 '게시'
 
     ".read": false,
     ".write": false,
 
+    // classes: 대시보드가 학년 노드를 읽고, 게임이 학생 위치를 씀(무인증).
+    // 실시간·비민감 데이터라 조작돼도 상품과 무관 — 행사 끝나면 통째로 삭제 권장.
     "classes": {
-      "//": "교사 대시보드는 학년 노드를 실시간으로 읽고, 학생 게임은 자기 위치를 씀(무인증). 실시간 위치·이름이라 삭제/조작돼도 상품과 무관 — 행사 끝나면 통째로 지울 것.",
       "$grade": {
         ".read": true,
         ".write": true
       }
     },
 
+    // records: 순위 기록. 읽기는 공개(리더보드·집계용),
+    // 쓰기는 아래 규칙이 삭제·시간조작을 차단한다.
     "records": {
-      "//": "순위 기록. 아무나 읽기는 가능(리더보드·집계용)하되, 아래 write 규칙이 삭제·조작을 막는다.",
       ".read": true,
       "$key": {
         ".write": "newData.exists() && (!data.exists() || newData.child('durationMs').val() <= data.child('durationMs').val())",
