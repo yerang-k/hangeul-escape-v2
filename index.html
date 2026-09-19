@@ -189,7 +189,8 @@
 <!-- 캐릭터 세팅 -->
 <div class="screen" id="setup"><div class="card">
   <h1>밀실의 문 앞에서</h1>
-  <div style="display:flex;gap:8px;margin-bottom:8px">
+  <div id="resumeInfo" style="display:none;margin:4px 0 14px;line-height:1.5"></div>
+  <div id="idRow" style="display:flex;gap:8px;margin-bottom:8px">
     <select class="fld" id="gradeIn" style="flex:1;margin:0">
       <option value="">학년</option>
       <option value="1">1학년</option>
@@ -205,6 +206,7 @@
     <button class="btn" id="toIntro" style="font-size:1.1rem;padding:12px 26px;flex:1">확인</button>
     <button class="btn" id="resumeBtn" style="font-size:1.1rem;padding:12px 26px;flex:1;display:none;background:#3c5a3c;color:#fff">이어서 하기</button>
   </div>
+  <button class="hlink" id="freshBtn" style="display:none;margin:12px auto 0">처음부터 새로 시작</button>
 </div></div>
 
 <!-- 인트로 -->
@@ -645,7 +647,29 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
       const saved = JSON.parse(saveStr);
       if(saved && saved.playerName){
         const btn = $('#resumeBtn');
+        // 이어하기 강조 모드: 입력폼을 숨기고 '이어서 하기'를 크게(실수로 새 게임 눌러 진행 날리는 것 방지)
+        $('#idRow').style.display='none';
+        $('#nameIn').style.display='none';
+        $('#swatches').style.display='none';
+        $('#toIntro').style.display='none';
+        const info=$('#resumeInfo');
+        info.style.display='block';
+        info.innerHTML=`<b style="color:var(--gold)">${esc(saved.playerName)}</b> 님, 진행 중인 게임이 있어요.<br><span style="color:var(--ink-dim);font-size:.9rem">현재 ${(saved.room||0)+1}번째 방 · 이어서 하면 그대로 계속됩니다.</span>`;
         btn.style.display = 'block';
+        btn.style.width = '100%';
+        btn.textContent = '▶ 이어서 하기';
+        // 정말 처음부터 하려는 사람만: 입력폼 다시 보이기
+        const fresh=$('#freshBtn');
+        fresh.style.display='block';
+        fresh.onclick=()=>{
+          $('#idRow').style.display='';
+          $('#nameIn').style.display='';
+          $('#swatches').style.display='';
+          $('#toIntro').style.display='';
+          info.style.display='none';
+          btn.style.display='none';
+          fresh.style.display='none';
+        };
         btn.onclick = () => {
           player.name = saved.playerName;
           player.shirt = saved.playerShirt;
