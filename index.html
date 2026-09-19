@@ -14,7 +14,7 @@
     --font-serif:'Nanum Myeongjo',serif;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden;background:#0d0805;
-    font-family:'Noto Serif KR','Nanum Myeongjo',serif;color:var(--ink);user-select:none;touch-action:none}
+    font-family:'Nanum Myeongjo',serif;color:var(--ink);user-select:none;touch-action:none}
   canvas{display:block}
   #hud{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
     padding:8px 12px;background:linear-gradient(#000000bb,#0000);pointer-events:none}
@@ -784,7 +784,16 @@ setInterval(updateElapsedDisplay,1000);
 /* ==================== 3D 시작 ==================== */
 $('#startBtn').onclick=()=>{ personalize(); $('#intro').style.display='none'; if(typeof THREE!=='undefined') start3D(); };
 
-function start3D(isResume){
+/* 캔버스 텍스처는 폰트 로딩 전에 그리면 브라우저별 대체 글꼴로 굳으므로, 웹폰트를 먼저 받은 뒤 3D 시작(최대 3초 대기) */
+const fontsReady=Promise.race([
+  (document.fonts&&document.fonts.load?Promise.all([
+    document.fonts.load('bold 34px "Nanum Myeongjo"','ㄱㄴㄷㅁㅅㅇㅈㅎㅏㅗㅜㅣㅂㅌㅍㄹ가나다라마바사아자차카타파하?'),
+    document.fonts.load('bold 54px "Nanum Myeongjo"','가나다라마바사아자차카타파하?')
+  ]):Promise.resolve()).catch(()=>{}),
+  new Promise(r=>setTimeout(r,3000))
+]);
+function start3D(isResume){ fontsReady.then(()=>start3DNow(isResume)); }
+function start3DNow(isResume){
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,300);
 const renderer=new THREE.WebGLRenderer({antialias:!IS_TOUCH, powerPreference:'high-performance'});
@@ -819,7 +828,7 @@ function wallTex(base){return makeTex((cx,s)=>{
   cx.strokeStyle='rgba('+ink+',0.13)';cx.lineWidth=2;
   for(let i=0;i<=4;i++){const p=i*s/4;cx.beginPath();cx.moveTo(p,0);cx.lineTo(p,s);cx.moveTo(0,p);cx.lineTo(s,p);cx.stroke();}
   const g=['ㄱ','ㄴ','ㄷ','ㅁ','ㅅ','ㅇ','ㅈ','ㅎ','ㅏ','ㅗ','ㅜ','ㅣ','ㅂ','ㅌ','ㅍ','ㄹ'];
-  cx.fillStyle='rgba('+ink+',0.24)';cx.font='bold 34px "Noto Serif KR",serif';cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillStyle='rgba('+ink+',0.24)';cx.font='bold 34px "Nanum Myeongjo",serif';cx.textAlign='center';cx.textBaseline='middle';
   let k=0;for(let r=0;r<4;r++)for(let c=0;c<4;c++)cx.fillText(g[(k++)%g.length],c*s/4+s/8,r*s/4+s/8);
 },256);}
 // 마룻바닥: 널결
@@ -838,7 +847,7 @@ function cyl(rt,rb,h,c){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,
 /* 텍스트 스프라이트(이름표·마커) */
 function textSprite(text,color){
   const cv=document.createElement('canvas');cv.width=256;cv.height=96;const ctx=cv.getContext('2d');
-  ctx.font='bold 54px "Nanum Myeongjo", "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='bold 54px "Nanum Myeongjo",serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.lineWidth=8;ctx.strokeStyle='rgba(0,0,0,.75)';ctx.strokeText(text,128,50);
   ctx.fillStyle=color||'#f3e6cf';ctx.fillText(text,128,50);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
