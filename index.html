@@ -621,8 +621,8 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
     player.classId = classId;
     player.number = number;
     player.name = name.slice(0,4);
-    const _origStart = localStorage.getItem('hangeul_escape_origStart');
-    S.startTime = _origStart ? Number(_origStart) : Date.now();
+    // '확인'은 새 게임 시작 → 시계를 항상 지금부터 새로(이전 접속의 origStart 재사용 안 함)
+    S.startTime = Date.now();
     localStorage.setItem('hangeul_escape_origStart', String(S.startTime));
     S.seed = Math.random().toString(36).slice(2) + Date.now().toString(36);
     S.wrongCounts = {};
