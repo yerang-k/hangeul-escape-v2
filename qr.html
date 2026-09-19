@@ -98,8 +98,9 @@ function render(){
 }
 
 base.addEventListener('input', render);
-// 이전에 입력한 주소 기억
-try{ var saved = localStorage.getItem('hangeul_qr_base'); if(saved){ base.value = saved; } }catch(e){}
+// 기본 주소 미리 채움(이전에 입력한 게 있으면 그걸 우선)
+var DEFAULT_BASE = 'https://yerang-k.github.io/hangeul-escape-v2/';
+try{ var saved = localStorage.getItem('hangeul_qr_base'); base.value = saved || DEFAULT_BASE; }catch(e){ base.value = DEFAULT_BASE; }
 render();
 </script>
 </body>
