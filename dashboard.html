@@ -272,8 +272,11 @@
       applyThemeUI();
     });
 
-    // 리스트 뷰 토글
-    let isCollapsed = false;
+    // 리스트 뷰 토글 (기본은 접힌 상태로 시작 — 조감도를 넓게 보기 위함)
+    let isCollapsed = true;
+    listSection.classList.add('hidden');
+    mapSection.classList.replace('lg:col-span-2', 'lg:col-span-3');
+    toggleText.textContent = "현황판 펴기";
     toggleListBtn.addEventListener('click', () => {
       isCollapsed = !isCollapsed;
       if (isCollapsed) {
