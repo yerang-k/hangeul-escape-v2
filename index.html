@@ -781,6 +781,8 @@ function syncFirebase(event) {
       currentRoomName: roomName,
       currentStep: currentStep,
       progressRate: Math.min(100, progressRate),
+      // 완주 시에만 총 소요시간(ms)을 올려 대시보드가 '빠른 순' 랭킹을 매기게 함. 그 외 이벤트는 null로 지워 재도전 시 옛 기록이 남지 않게 함
+      durationMs: event === 'win' ? Date.now() - (S.startTime || Date.now()) : null,
       lastUpdated: Date.now()
     };
 

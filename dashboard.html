@@ -8,7 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
   <script>
-    if (localStorage.getItem('hangeul_dashboard_theme') === 'dark') {
+    // 기본은 다크. 교사가 라이트로 바꾸면 그 선택을 기억(키를 v2로 새로 써서 예전 저장값과 섞이지 않게 함)
+    if (localStorage.getItem('hangeul_dashboard_theme_v2') !== 'light') {
       document.documentElement.classList.add('dark');
     }
   </script>
@@ -101,8 +102,10 @@
 
         <!-- 최종 완주 성공 구역 -->
         <div class="mt-5 border-t border-[#e9e6e0] dark:border-[#2c2924] pt-4">
-          <h3 class="text-[14px] font-bold text-[#22201c] dark:text-[#ece7df] serif mb-3">최종 탈출 성공 명단</h3>
-          <div class="flex flex-wrap gap-2 min-h-[44px]" id="winRoomArea">
+          <h3 class="text-[14px] font-bold text-[#22201c] dark:text-[#ece7df] serif mb-3 flex items-baseline gap-2">최종 탈출 랭킹
+            <span class="text-[11px] font-normal text-[#8f8a80] font-sans">빠른 시간 순 · 상위 10명 선물 대상</span>
+          </h3>
+          <div class="space-y-1.5 min-h-[44px] max-h-[360px] overflow-y-auto pr-1" id="winRoomArea">
             <div class="text-[#8f8a80] text-sm my-auto">아직 완주한 학생이 없습니다.</div>
           </div>
         </div>
@@ -248,7 +251,7 @@
     applyThemeUI();
     themeToggleBtn.addEventListener('click', () => {
       document.documentElement.classList.toggle('dark');
-      localStorage.setItem('hangeul_dashboard_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+      localStorage.setItem('hangeul_dashboard_theme_v2', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
       applyThemeUI();
     });
 
@@ -458,7 +461,51 @@
     }
 
     const prevRooms = {};
-    
+
+    // 완주 랭킹: 소요시간(durationMs)이 빠른 순. 시간 정보가 없는 옛 데이터는 뒤로 보내고 완주 시각 순
+    function fmtDur(ms) {
+      const s = Math.round(ms / 1000);
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+    const MEDALS = [
+      'from-[#f3d98a] to-[#c99a2e]',   // 금
+      'from-[#e4e6ea] to-[#a9adb4]',   // 은
+      'from-[#e3b48a] to-[#a86b3c]'    // 동
+    ];
+    function renderRanking(finishers) {
+      const has = f => typeof f.st.durationMs === 'number';
+      finishers.sort((a, b) => (has(b) - has(a)) || (has(a) ? a.st.durationMs - b.st.durationMs : a.lastActive - b.lastActive));
+      let html = '';
+      finishers.forEach((f, i) => {
+        const rank = i + 1, st = f.st, top = rank <= 10;
+        const rowCls = rank === 1
+          ? 'bg-[#f8ecc6] dark:bg-[#33290f] border-[#e6cd82] dark:border-[#6b5518]'
+          : top
+            ? 'bg-[#faf3df] dark:bg-[#2a2314] border-[#eddfb5] dark:border-[#4a3d20]'
+            : 'bg-white dark:bg-[#1c1a17] border-[#e9e6e0] dark:border-[#2c2924]';
+        const badge = rank <= 3
+          ? `<span class="w-7 h-7 flex-none rounded-full bg-gradient-to-br ${MEDALS[rank - 1]} text-[#2a2110] text-[13px] font-bold flex items-center justify-center shadow-sm">${rank}</span>`
+          : top
+            ? `<span class="w-7 h-7 flex-none rounded-full border border-[#c99a2e] dark:border-[#8a6d22] text-[#9a7420] dark:text-[#e0b357] text-[12px] font-bold flex items-center justify-center">${rank}</span>`
+            : `<span class="w-7 flex-none text-center text-[12px] text-[#8f8a80]">${rank}</span>`;
+        const time = has(f)
+          ? `<span class="text-[15px] font-bold ${top ? 'text-[#9a7420] dark:text-[#e0b357]' : 'text-[#5c574e] dark:text-[#b7b1a6]'}">${fmtDur(st.durationMs)}</span>`
+          : `<span class="text-[11px] text-[#8f8a80]" title="소요시간 정보 없음(완주 시각)">${f.timeStr}</span>`;
+        html += `
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg border ${rowCls}">
+            ${badge}
+            <span class="font-semibold text-[14px] text-[#22201c] dark:text-[#ece7df] truncate">${esc(st.name)}</span>
+            <span class="font-mono text-[11px] text-[#8f8a80] flex-none">${esc(st.classId || '')} ${st.number}번</span>
+            <span class="ml-auto flex-none">${time}</span>
+          </div>`;
+        // 상위 10명 경계선(선물 기준선)
+        if (rank === 10 && finishers.length > 10) {
+          html += `<div class="flex items-center gap-2 py-1 text-[11px] text-[#9a7420] dark:text-[#e0b357]"><span class="flex-1 h-px bg-[#e6cd82] dark:bg-[#4a3d20]"></span>여기까지 상위 10명<span class="flex-1 h-px bg-[#e6cd82] dark:bg-[#4a3d20]"></span></div>`;
+        }
+      });
+      return html;
+    }
+
     function renderDashboard() {
       const students = [];
       for (const key in studentsData) {
@@ -472,8 +519,7 @@
       studentCount.textContent = `${students.length}명 참여 중`;
       
       let listHTML = '';
-      let winHTML = '';
-      let hasWin = false;
+      const finishers = [];
       const now = Date.now();
       
       students.forEach(st => {
@@ -521,14 +567,7 @@
         
         // 2) 조감도 칩 렌더링
         if (isFinished) {
-          hasWin = true;
-          winHTML += `
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] bg-[#eaf5f0] dark:bg-[#1e2f28] border border-[#cbe6db] dark:border-[#2c4a3e]">
-              <span class="font-mono text-[11px] text-[#3f9e7c] dark:text-[#5fbf98]">${esc(st.classId || '')} ${st.number}번</span>
-              <span class="font-semibold text-[#22201c] dark:text-[#ece7df]">${esc(st.name)}</span>
-              <span class="text-[11px] text-[#8f8a80]">${timeStr}</span>
-            </div>
-          `;
+          finishers.push({ st, timeStr, lastActive });
 
           const oldChip = document.getElementById(`student_chip_${st._key}`);
           if (oldChip) {
@@ -586,7 +625,7 @@
       });
       
       studentList.innerHTML = listHTML || `<div class="text-stone-400 text-center py-10 text-sm italic">참여 중인 학생이 없습니다.</div>`;
-      winRoomArea.innerHTML = hasWin ? winHTML : `<div class="text-stone-400 text-sm my-auto italic">아직 완주한 학생이 없습니다.</div>`;
+      winRoomArea.innerHTML = finishers.length ? renderRanking(finishers) : `<div class="text-[#8f8a80] text-sm my-auto">아직 완주한 학생이 없습니다.</div>`;
       
       const existingChips = document.querySelectorAll('.student-chip');
       existingChips.forEach(chip => {
