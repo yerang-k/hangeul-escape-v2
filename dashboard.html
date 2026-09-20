@@ -473,7 +473,8 @@
       'from-[#e3b48a] to-[#a86b3c]'    // 동
     ];
     function renderRanking(finishers) {
-      const has = f => typeof f.st.durationMs === 'number';
+      // 서버 규칙과 같은 인정 범위(1~90분)만 시간으로 인정. 벗어난 값(옛 저장 이어하기 등)은 시간 없음으로 취급해 뒤로 보냄
+      const has = f => typeof f.st.durationMs === 'number' && f.st.durationMs >= 60000 && f.st.durationMs <= 5400000;
       finishers.sort((a, b) => (has(b) - has(a)) || (has(a) ? a.st.durationMs - b.st.durationMs : a.lastActive - b.lastActive));
       let html = '';
       finishers.forEach((f, i) => {

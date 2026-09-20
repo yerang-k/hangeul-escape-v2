@@ -645,7 +645,10 @@ const stById=id=>CUR().stations.find(s=>s.id===id);
   if(saveStr){
     try {
       const saved = JSON.parse(saveStr);
-      if(saved && saved.playerName){
+      // 저장 게임이 3시간 넘게 지났으면 만료(며칠 전 테스트 흔적을 이어해 소요시간이 수천 분으로 찍히는 것 방지)
+      const _resumable = saved && saved.playerName && saved.startTime && (Date.now() - saved.startTime) < 3*60*60*1000;
+      if(saved && saved.playerName && !_resumable) localStorage.removeItem('hangeul_escape_save');
+      if(_resumable){
         const btn = $('#resumeBtn');
         // 이어하기 강조 모드: 입력폼을 숨기고 '이어서 하기'를 크게(실수로 새 게임 눌러 진행 날리는 것 방지)
         $('#idRow').style.display='none';
@@ -1653,7 +1656,9 @@ async function updateAndShowLeaderboard(elapsedMs){
     const key=`c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
     const ref=db.ref('records/'+key);
     const mySnap=await ref.once('value'); const prev=mySnap.val();
-    if(!prev || elapsedMs<prev.durationMs){
+    // 서버 보안 규칙(1~90분)과 같은 범위일 때만 기록. 범위 밖이면 쓰기를 건너뛰고 순위는 그대로 보여줌(오류로 막히지 않게)
+    const inRange = elapsedMs>=60000 && elapsedMs<=5400000;
+    if(inRange && (!prev || elapsedMs<prev.durationMs)){
       await ref.set({name:player.name,classId:player.classId,number:player.number,durationMs:elapsedMs,ts:Date.now()});
     }
     const allSnap=await db.ref('records').once('value');
