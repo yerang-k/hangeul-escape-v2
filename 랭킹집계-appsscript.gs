@@ -112,8 +112,9 @@ function buildRanking() {
     return;
   }
 
-  // 2) 학번별 최고기록만 남기기(중복·재도전 시 가장 빠른 기록)
-  var best = {}; // sid -> {grade,cls,num,name,sec,ts}
+  // 2) 학년+반+번호+이름이 모두 같은 경우만 같은 사람으로 보고 최고기록만 남기기
+  //    (학번이 같아도 이름이 다르면 별개 기록으로 취급 → 오타로 학번이 겹쳐도 서로 덮어쓰지 않음)
+  var best = {}; // key(sid+이름) -> {grade,cls,num,name,sec,ts}
   for (var r = 0; r < rows.length; r++) {
     var row = rows[r];
     var p = parseSid(row[col.sid]);
@@ -121,14 +122,15 @@ function buildRanking() {
     if (!p || sec === null) continue;
     var name = (col.name >= 0 ? String(row[col.name] || '') : '').trim();
     var ts = row[0] instanceof Date ? row[0].getTime() : 0; // A열 타임스탬프
-    var cur = best[p.sid];
-    if (!cur || sec < cur.sec) best[p.sid] = { grade: p.grade, cls: p.cls, num: p.num, name: name, sec: sec, ts: ts };
+    var key = p.sid + '|' + name;
+    var cur = best[key];
+    if (!cur || sec < cur.sec) best[key] = { grade: p.grade, cls: p.cls, num: p.num, sid: p.sid, name: name, sec: sec, ts: ts };
   }
 
   // 3) 학년별로 묶어 정렬(빠른 순, 동점이면 먼저 완주한 순)
   var byGrade = {};
-  Object.keys(best).forEach(function (sid) {
-    var b = best[sid];
+  Object.keys(best).forEach(function (key) {
+    var b = best[key];
     (byGrade[b.grade] = byGrade[b.grade] || []).push(b);
   });
 
