@@ -8,8 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
   <script>
-    // 기본은 다크. 교사가 라이트로 바꾸면 그 선택을 기억(키를 v2로 새로 써서 예전 저장값과 섞이지 않게 함)
-    if (localStorage.getItem('hangeul_dashboard_theme_v2') !== 'light') {
+    // 기본은 라이트. 교사가 다크로 바꾸면 그 선택을 기억(키를 v2로 새로 써서 예전 저장값과 섞이지 않게 함)
+    if (localStorage.getItem('hangeul_dashboard_theme_v2') === 'dark') {
       document.documentElement.classList.add('dark');
     }
   </script>
@@ -138,7 +138,7 @@
         <span id="studentCount" class="text-[12px] font-medium bg-[#f5f3ef] dark:bg-[#211e1a] border border-[#e9e6e0] dark:border-[#2c2924] px-2.5 py-1 rounded-full text-[#5c574e] dark:text-[#b7b1a6]">0명 참여 중</span>
       </h2>
 
-      <div class="space-y-2 overflow-y-auto max-h-[75vh] pr-1" id="studentList">
+      <div class="space-y-2 overflow-y-auto max-h-[92vh] pr-1" id="studentList">
       </div>
     </section>
   </div>

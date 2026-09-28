@@ -201,6 +201,7 @@
     <input class="fld" id="numIn" type="number" min="1" max="50" placeholder="번호" style="flex:1;margin:0" inputmode="numeric">
   </div>
   <input class="fld" id="nameIn" maxlength="4" placeholder="이름 (최대 4자)" style="margin-top:0">
+  <div class="fine" style="margin-top:6px;margin-bottom:2px">※ 띄어쓰기 없이 본인 이름을 정확하게 입력하세요.</div>
   <div class="swatches" id="swatches"></div>
   <div style="display:flex;gap:10px;justify-content:center;margin-top:6px;width:100%">
     <button class="btn" id="toIntro" style="font-size:1.1rem;padding:12px 26px;flex:1">확인</button>
@@ -720,7 +721,7 @@ function saveGame(){
 // 대시보드는 반(1-10) 단위가 아니라 학년(특별실) 단위 3개로 운영 — 학급은 학생 식별용으로만 유지
 const VENUE_NAMES = {'1':'시청각실','2':'대회의실','3':'수학전용실'};
 function venueId(classId){ return (classId||'1').split('-')[0]; }
-function dashKey(classId, number){ return 'student_'+(classId+'_'+number).replace(/[.#$/\[\]]/g,'_'); }
+function dashKey(classId, number, name){ return 'student_'+(classId+'_'+number+'_'+(name||'')).replace(/[.#$/\[\]]/g,'_'); }
 function syncFirebase(event) {
   if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
     return;
@@ -789,7 +790,7 @@ function syncFirebase(event) {
       lastUpdated: Date.now()
     };
 
-    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number)).update(updates);
+    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number, player.name)).update(updates);
   } catch (e) {
     console.warn('Firebase 상태 동기화 실패:', e);
   }
@@ -802,7 +803,7 @@ function syncFirebasePosition(x, z) {
     const classId = player.classId || '1';
     const number = player.number || 1;
     const db = firebase.database();
-    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number)).update({
+    db.ref('classes/' + venueId(classId) + '/' + dashKey(classId, number, player.name)).update({
       x: Math.round(x * 100) / 100,
       z: Math.round(z * 100) / 100,
       lastUpdated: Date.now()
@@ -1653,7 +1654,7 @@ async function updateAndShowLeaderboard(elapsedMs){
   if(typeof firebase==='undefined'||!firebase.apps||firebase.apps.length===0){ el.innerHTML=closeBtn; return; }
   try{
     const db=firebase.database();
-    const key=`c_${player.classId}_n_${player.number}`.replace(/[.#$/\[\]]/g,'_');
+    const key=`c_${player.classId}_n_${player.number}_${player.name||''}`.replace(/[.#$/\[\]]/g,'_');
     const ref=db.ref('records/'+key);
     const mySnap=await ref.once('value'); const prev=mySnap.val();
     // 서버 보안 규칙(1~90분)과 같은 범위일 때만 기록. 범위 밖이면 쓰기를 건너뛰고 순위는 그대로 보여줌(오류로 막히지 않게)
@@ -1667,10 +1668,10 @@ async function updateAndShowLeaderboard(elapsedMs){
     const list=[]; allSnap.forEach(c=>{const v=c.val(); if(v&&typeof v.durationMs==='number'&&String(v.classId).split('-')[0]===myGrade)list.push(v);});
     list.sort((a,b)=>a.durationMs-b.durationMs);
     const top10=list.slice(0,10);
-    const myRank=list.findIndex(v=>v.classId===player.classId&&v.number===player.number)+1;
+    const myRank=list.findIndex(v=>v.classId===player.classId&&v.number===player.number&&v.name===player.name)+1;
     const rankLabel=i=>i<3?['🥇','🥈','🥉'][i]:(i+1)+'위';
     const rows=top10.map((v,i)=>{
-      const mine=v.classId===player.classId&&v.number===player.number;
+      const mine=v.classId===player.classId&&v.number===player.number&&v.name===player.name;
       return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0${mine?';color:var(--gold);font-weight:bold':''}">
         <span>${rankLabel(i)} ${esc(v.name)}</span><span>${fmtDuration(v.durationMs)}</span></div>`;
     }).join('');
