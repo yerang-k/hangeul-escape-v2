@@ -26,11 +26,11 @@
     display:grid;place-items:center;font-size:1.2rem;font-weight:800;color:var(--gold);background:#0007}
   .slot small{position:absolute;bottom:-13px;font-size:.5rem;color:var(--ink-dim)}
   #items{font-size:1.3rem;min-width:30px;text-align:right}
-  #stick{position:fixed;right:22px;bottom:26px;width:130px;height:130px;z-index:20;border-radius:50%;
+  #stick{position:fixed;left:22px;bottom:26px;width:130px;height:130px;z-index:20;border-radius:50%;
     background:#ffffff14;border:2px solid #ffffff33;touch-action:none}
   #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
     background:var(--gold);box-shadow:0 4px 12px #0008;opacity:.9}
-  #act{position:fixed;left:22px;bottom:44px;z-index:20;padding:18px 24px;border:none;border-radius:18px;
+  #act{position:fixed;right:22px;bottom:44px;z-index:20;padding:18px 24px;border:none;border-radius:18px;
     background:var(--gold);color:#1a120b;font-family:inherit;font-weight:800;font-size:1.05rem;box-shadow:0 6px 18px #000a;display:none}
   #hintbar{position:fixed;left:0;right:0;bottom:4px;z-index:15;text-align:center;color:#ffffff88;font-size:.76rem;pointer-events:none}
 
@@ -586,7 +586,7 @@ const $=s=>document.querySelector(s);
 /* 터치 기기 여부: 폰·패드면 키보드 단축키 안내를 숨긴다 */
 const IS_TOUCH = (matchMedia&&matchMedia('(pointer:coarse)').matches) || ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 $('#hintbar').textContent = IS_TOUCH
-  ? '오른쪽 조이스틱으로 이동 · 가구에 다가가 톡톡 두드리기(화면 터치)'
+  ? '왼쪽 조이스틱으로 이동 · 가구에 다가가 톡톡 두드리기(화면 터치)'
   : '이동 WASD/조이스틱 · 가구에 다가가 클릭 또는 E로 두드리기';
 const player={name:'탐험가',shirt:SHIRTS[0],session:'',classId:'1',number:1};
 const progress={room:0};
