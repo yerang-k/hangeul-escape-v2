@@ -276,10 +276,7 @@
 <script>
 /* ===================== 선생님 설정 ===================== */
 const CONFIG = {
-  // 1. 스프레드시트 직접 연동 (GAS 웹앱 사용 시)
-  SHEET_URL: "https://script.google.com/macros/s/AKfycbxznDbsvKDouhbr9VdRyxM2EKpR5mbta0YjSXUa8j-rXFoNnyICDszqsCRz4SYbrF0r/exec",
-  
-  // 2. 구글폼 연동 (스프레드시트 부하 방지용 권장)
+  // 1. 구글폼 연동 (완주 기록 제출 → 응답 스프레드시트)
   FORM_URL: "https://docs.google.com/forms/d/e/1FAIpQLSe3NyI948jN3xvvGjbGBq4hYqaHqIqJICr2d1HQfXJgVkJnQQ/viewform",
   FORM_ENTRIES: {
     id: "entry.1272965112",
@@ -288,7 +285,7 @@ const CONFIG = {
     duration: "entry.93173145"
   },
 
-  // 3. 멀티플레이 설정
+  // 2. 멀티플레이 설정
   FIREBASE: { apiKey:"AIzaSyBL5S89ZPrwPcxE0SNYOU-7wbkhesNBKkQ", authDomain:"hangeul-escape.firebaseapp.com", databaseURL:"https://hangeul-escape-default-rtdb.asia-southeast1.firebasedatabase.app", projectId:"hangeul-escape" }
 };
 if (typeof firebase !== 'undefined' && CONFIG.FIREBASE && CONFIG.FIREBASE.databaseURL) {
@@ -1615,16 +1612,6 @@ function finishRoom(){ syncFirebase('safe'); if(progress.room>=ROOMS.length-1)wi
 function makeCode(){const d=new Date(),p=n=>String(n).padStart(2,'0');
   const rnd=Array.from({length:2},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
   return `HG-${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}-${rnd}`;}
-function submitSheet(code, duration, elapsedMs){
-  const sid=($('#sid').value||'').trim(), nm=($('#snm').value||'').trim();
-  const msg=$('#sheetMsg');
-  if(!sid||!nm){ msg.style.color='var(--no)'; msg.textContent='학번과 이름을 모두 입력하세요.'; return; }
-  const btn=$('#sheetBtn'); btn.disabled=true; btn.textContent='제출 중…'; msg.style.color='var(--ink-dim)'; msg.textContent='';
-  fetch(CONFIG.SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({studentId:sid,name:nm,code:code,time:new Date().toISOString(),duration:duration})})
-   .then(()=>{ msg.style.color='var(--ok)'; msg.textContent='✅ 제출 완료되었습니다.'; btn.disabled=false; btn.textContent='🏆 랭킹보기'; btn.onclick=()=>updateAndShowLeaderboard(elapsedMs); })
-   .catch(()=>{ msg.style.color='var(--no)'; msg.textContent='전송 실패 — 인터넷을 확인하고 다시 시도하세요.'; btn.disabled=false; btn.textContent='📋 제출'; });
-}
 function submitGoogleForm(code, duration, elapsedMs){
   const sid=($('#sid').value||'').trim(), nm=($('#snm').value||'').trim();
   const msg=$('#sheetMsg');
@@ -1703,13 +1690,6 @@ function win(){
       <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
       <div class="fine" id="sheetMsg"></div>`;
     $('#sheetBtn').onclick=()=>submitGoogleForm(code, durationStr, elapsedMs);
-  } else if(CONFIG.SHEET_URL){
-    $('#winsubmit').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="sid" placeholder="학번" value="${prefillSid}" style="${inpS}" autocomplete="off" inputmode="numeric">
-        <input id="snm" placeholder="이름" value="${prefillNm}" style="${inpS}" autocomplete="off"></div>
-      <button class="btn" id="sheetBtn" style="width:100%">📋 제출</button>
-      <div class="fine" id="sheetMsg"></div>`;
-    $('#sheetBtn').onclick=()=>submitSheet(code, durationStr, elapsedMs);
   } else {
     // 제출 폼이 설정 안 된 경우엔 제출 절차가 없으니 랭킹보기 버튼만 바로 노출
     $('#winsubmit').innerHTML=`<button class="btn ghost" id="rankOnlyBtn" style="width:100%">🏆 랭킹보기</button>`;
