@@ -602,12 +602,18 @@
           const skirtColor = safeColor(st.color) || CHAR_COLORS[(st.number + (st.classId || '').length) % CHAR_COLORS.length];
           const safeTitle = esc(`${st.classId || ''} ${st.name} (${st.number}번) / 학습단계: ${st.currentStep || '진행 중'}`);
 
-          chip.innerHTML = `
+          // 이름·색·정체 여부·툴팁이 그대로면 그림(SVG)을 다시 만들지 않음 — 위치(left/top)만 아래에서 갱신.
+          // 300명이면 SVG 재생성이 한 번 그릴 때 시간의 거의 절반이라 이것만으로 크게 줄어든다.
+          const chipSig = [st.name, skirtColor, isStagnant ? 1 : 0, safeTitle].join('|');
+          if (chip.dataset.sig !== chipSig) {
+            chip.dataset.sig = chipSig;
+            chip.innerHTML = `
             <div class="flex flex-col items-center cursor-help" title="${safeTitle}">
               <div class="name-pill text-[10px] leading-none whitespace-nowrap mb-1">${esc(st.name)}</div>
               ${hanbokSVG(skirtColor, isStagnant)}
             </div>
           `;
+          }
           
           if (isRoomChanged) {
             chip.classList.add('no-transition');
