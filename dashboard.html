@@ -428,12 +428,17 @@
       fbRef.on('child_removed', (snap) => { delete studentsData[snap.key]; scheduleRender(); }, onFbError);
     }
 
-    // 여러 학생이 같은 순간에 위치를 보내도 화면은 프레임당 한 번만 다시 그림
-    let renderScheduled = false;
+    // 화면 갱신은 최대 0.5초에 한 번. 학생 300명이 1초마다 위치를 보내면 프레임마다 전체를 다시 그려
+    // PC가 버벅이므로(300명 기준 1회 약 70ms), 묶어서 그린다. 칩 이동 애니메이션(1초)이 사이를 메워 눈에는 차이가 없다.
+    const RENDER_MIN_MS = 500;
+    let renderScheduled = false, lastRenderAt = 0;
     function scheduleRender() {
       if (renderScheduled) return;
       renderScheduled = true;
-      requestAnimationFrame(() => { renderScheduled = false; renderDashboard(); });
+      const wait = Math.max(0, RENDER_MIN_MS - (Date.now() - lastRenderAt));
+      setTimeout(() => requestAnimationFrame(() => {
+        renderScheduled = false; lastRenderAt = Date.now(); renderDashboard();
+      }), wait);
     }
     
     function renderError(msg) {
@@ -625,7 +630,8 @@
         }
       });
       
-      studentList.innerHTML = listHTML || `<div class="text-stone-400 text-center py-10 text-sm italic">참여 중인 학생이 없습니다.</div>`;
+      // 현황판이 접혀 있으면(기본) 안 보이는 목록은 다시 그리지 않음. 펴는 순간 토글이 renderDashboard를 불러 채운다.
+      if (!isCollapsed) studentList.innerHTML = listHTML || `<div class="text-stone-400 text-center py-10 text-sm italic">참여 중인 학생이 없습니다.</div>`;
       winRoomArea.innerHTML = finishers.length ? renderRanking(finishers) : `<div class="text-[#8f8a80] text-sm my-auto">아직 완주한 학생이 없습니다.</div>`;
       
       const existingChips = document.querySelectorAll('.student-chip');
